@@ -22,10 +22,11 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    // Load keystore properties
+    // Load keystore properties (for local builds)
     val keystorePropertiesFile = rootProject.file("key.properties")
     val keystoreProperties = Properties()
-    if (keystorePropertiesFile.exists()) {
+    val hasKeystoreFile = keystorePropertiesFile.exists()
+    if (hasKeystoreFile) {
         keystoreProperties.load(FileInputStream(keystorePropertiesFile))
     }
 
@@ -40,17 +41,24 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
-            keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String? ?: ""
+        // Only create release signing config if we have local keystore file
+        // In CI/CD (Codemagic), signing is handled automatically via android_signing
+        if (hasKeystoreFile) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
+                keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
+                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+                storePassword = keystoreProperties["storePassword"] as String? ?: ""
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Use local keystore if available, otherwise Codemagic handles signing
+            if (hasKeystoreFile) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
             }
