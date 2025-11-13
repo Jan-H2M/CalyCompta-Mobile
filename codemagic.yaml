@@ -342,21 +342,20 @@ workflows:
   # MANUAL TRIGGER WORKFLOW - On-Demand Builds
   # ==========================================================================
   manual-build:
-    name: Manual Build (iOS + Android)
-    max_build_duration: 90
+    name: Manual Build (Android Only)
+    max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: be.calypso.calycompta
+      # iOS signing disabled - uncomment when iOS signing is configured
+      # ios_signing:
+      #   distribution_type: app_store
+      #   bundle_identifier: be.calypso.calycompta
 
       android_signing:
         - calycompta_keystore
 
       flutter: stable
-      xcode: latest
-      cocoapods: default
 
     # Manual trigger only (no automatic triggers)
     triggering:
@@ -367,24 +366,27 @@ workflows:
           include: false
 
     scripts:
-      - name: Load Firebase configs
+      - name: Load Firebase config (Android)
         script: |
-          echo $IOS_FIREBASE_PLIST | base64 --decode > $CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist
+          echo "Loading Android Firebase configuration..."
           echo $ANDROID_FIREBASE_JSON | base64 --decode > $CM_BUILD_DIR/android/app/google-services.json
+          echo "✅ google-services.json created"
+          ls -la $CM_BUILD_DIR/android/app/google-services.json
 
       - name: Get Flutter packages
-        script: flutter pub get
-
-      - name: Build iOS
         script: |
-          cd ios && pod install && cd ..
-          flutter build ipa --release
+          echo "📦 Getting Flutter packages"
+          flutter pub get
 
-      - name: Build Android
-        script: flutter build appbundle --release
+      - name: Build Android APK
+        script: |
+          echo "🏗️ Building Android APK (release mode)"
+          flutter build apk --release
+          echo "✅ Build completed!"
+          ls -lh build/app/outputs/flutter-apk/*.apk
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/*.aab
 
     publishing:
