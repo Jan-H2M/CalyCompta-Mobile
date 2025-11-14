@@ -1,9 +1,9 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Vercel API handler for user activation
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 // Track initialization status
-let initializationError: Error | null = null;
+let initializationError = null;
 let isInitialized = false;
 
 // Initialize Firebase Admin SDK
@@ -16,7 +16,7 @@ function initializeFirebase() {
   try {
     // In production, Vercel will use service account from environment variables
     // In development, you can use a service account key file
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    let serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
     if (!serviceAccountKey) {
       console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set');
@@ -25,10 +25,50 @@ function initializeFirebase() {
 
     let serviceAccount;
     try {
-      serviceAccount = JSON.parse(serviceAccountKey);
+      // The service account key can be in different formats depending on how it's stored
+      // Try multiple parsing strategies
+
+      // Strategy 1: Direct parse (if it's properly formatted JSON)
+      try {
+        serviceAccount = JSON.parse(serviceAccountKey);
+        console.log('✅ Parsed service account directly');
+      } catch (e1) {
+        // Strategy 2: The env var might be a stringified JSON (double-encoded)
+        try {
+          const decoded = JSON.parse(serviceAccountKey);
+          if (typeof decoded === 'string') {
+            serviceAccount = JSON.parse(decoded);
+            console.log('✅ Parsed double-encoded service account');
+          } else {
+            serviceAccount = decoded;
+          }
+        } catch (e2) {
+          // Strategy 3: Manual parsing for multiline private keys
+          // This handles cases where the JSON has actual newlines in the private key
+          // We'll extract the private key separately and handle it
+
+          console.log('Attempting to fix multiline private key issue...');
+
+          // Use regex to extract the private key
+          const privateKeyMatch = serviceAccountKey.match(/"private_key":\s*"(-----BEGIN[\s\S]*?-----END[^"]*?)"/);
+
+          if (privateKeyMatch) {
+            const originalPrivateKey = privateKeyMatch[1];
+            // Escape the newlines in the private key
+            const escapedPrivateKey = originalPrivateKey.replace(/\n/g, '\\n');
+            // Replace the private key in the JSON with the escaped version
+            const fixedJson = serviceAccountKey.replace(privateKeyMatch[0], `"private_key": "${escapedPrivateKey}"`);
+            serviceAccount = JSON.parse(fixedJson);
+            console.log('✅ Fixed and parsed service account with multiline private key');
+          } else {
+            throw new Error('Could not extract private key from service account JSON');
+          }
+        }
+      }
     } catch (parseError) {
       console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', parseError);
-      throw new Error('Invalid Firebase service account key format');
+      console.error('First 200 chars:', serviceAccountKey.substring(0, 200));
+      throw new Error('Invalid Firebase service account key format: ' + parseError.message);
     }
 
     if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
@@ -43,7 +83,7 @@ function initializeFirebase() {
 
     console.log('✅ Firebase Admin SDK initialized successfully');
     isInitialized = true;
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Failed to initialize Firebase Admin SDK:', error);
     initializationError = error;
     throw error;
@@ -54,10 +94,7 @@ function initializeFirebase() {
  * Vercel Serverless Function to activate a pending user
  * This endpoint wraps the Firebase Cloud Function activateUser
  */
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
+async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -66,7 +103,7 @@ export default async function handler(
   // Initialize Firebase if not already initialized
   try {
     initializeFirebase();
-  } catch (initError: any) {
+  } catch (initError) {
     console.error('❌ [activate-user API] Firebase initialization failed:', initError);
     return res.status(500).json({
       error: 'Server configuration error',
@@ -150,7 +187,7 @@ export default async function handler(
       });
 
       console.log('✅ [activate-user API] Firebase Auth user created:', authUser.uid);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [activate-user API] Error creating Firebase Auth user:', error);
 
       if (error.code === 'auth/email-already-exists') {
@@ -222,7 +259,7 @@ export default async function handler(
       userId: userId
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ [activate-user API] Unexpected error:', error);
 
     // Return a more specific error message based on the error type
@@ -241,3 +278,5 @@ export default async function handler(
     });
   }
 }
+
+export default handler;
