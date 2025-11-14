@@ -414,7 +414,7 @@ workflows:
 
     # Reference to App Store Connect integration
     integrations:
-      app_store_connect: codemagic
+      app_store_connect: Developer Portal
 
     environment:
       # iOS Code Signing - Automatic via App Store Connect API
