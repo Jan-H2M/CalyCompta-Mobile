@@ -5,11 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -53,15 +51,3 @@ ios/Runner/GoogleService-Info.plist
 .env
 .env.local
 .env.production
-
-# Codemagic credentials (PRIVÉ!)
-CODEMAGIC_CREDENTIALS.md
-CODEMAGIC_SETUP_STATUS.md
-
-# Android signing
-android/key.properties
-android/*.keystore
-
-# Keystore info (CONFIDENTIAL)
-KEYSTORE_INFO.md
-node_modules

@@ -357,7 +357,14 @@ export function UserDetailView({
                         const authToken = await firebaseAuthUser.getIdToken();
 
                         // Call Vercel serverless function
-                        const response = await fetch('/api/activate-user', {
+                        // Use environment variable for API URL or fallback to relative path
+                        const apiUrl = import.meta.env.VITE_API_URL
+                          ? `${import.meta.env.VITE_API_URL}/api/activate-user`
+                          : '/api/activate-user';
+
+                        console.log('🌐 [UserDetailView] Using API URL:', apiUrl);
+
+                        const response = await fetch(apiUrl, {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json',
