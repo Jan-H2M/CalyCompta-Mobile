@@ -420,6 +420,10 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: be.calypsodc.calymob
+        provisioning_profiles:
+          - CalyMob App Store
+        certificates:
+          - CalyMob Distribution
 
       # Environment variables for Xcode
       vars:
