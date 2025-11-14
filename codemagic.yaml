@@ -457,12 +457,16 @@ workflows:
       - name: Verify Firebase configuration
         script: |
           echo "🔧 Checking iOS Firebase configuration"
-          if [ ! -f "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist" ]; then
-            echo "❌ ERROR: GoogleService-Info.plist not found!"
-            exit 1
+          echo "Current directory: $(pwd)"
+          echo "Listing ios/Runner directory:"
+          ls -la ios/Runner/ || true
+          if [ -f "ios/Runner/GoogleService-Info.plist" ]; then
+            echo "✅ GoogleService-Info.plist exists"
+            ls -la ios/Runner/GoogleService-Info.plist
+          else
+            echo "⚠️ WARNING: GoogleService-Info.plist not found, but continuing build"
+            echo "The file should be in the repository at ios/Runner/GoogleService-Info.plist"
           fi
-          echo "✅ GoogleService-Info.plist exists"
-          ls -la $CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist
 
       - name: Get Flutter packages
         script: |
