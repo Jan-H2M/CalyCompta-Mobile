@@ -376,10 +376,22 @@ export function UserDetailView({
                           }),
                         });
 
-                        const data = await response.json();
+                        let data;
+                        const contentType = response.headers.get('content-type');
+
+                        if (contentType && contentType.includes('application/json')) {
+                          data = await response.json();
+                        } else {
+                          // If response is not JSON, try to read it as text
+                          const text = await response.text();
+                          console.error('❌ Non-JSON response:', text);
+                          data = { error: 'Server error: ' + text };
+                        }
 
                         if (!response.ok) {
-                          throw new Error(data.error || 'Erreur lors de l\'activation');
+                          console.error('❌ API Error Response:', data);
+                          const errorMessage = data.hint ? `${data.error}\n${data.hint}` : (data.error || 'Erreur lors de l\'activation');
+                          throw new Error(errorMessage);
                         }
 
                         console.log('✅ [UserDetailView] Activation successful:', data);

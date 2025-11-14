@@ -2,22 +2,51 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
-// Initialize Firebase Admin SDK
-if (!getApps().length) {
-  // In production, Vercel will use service account from environment variables
-  // In development, you can use a service account key file
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-    : undefined;
+// Track initialization status
+let initializationError: Error | null = null;
+let isInitialized = false;
 
-  if (serviceAccount) {
+// Initialize Firebase Admin SDK
+function initializeFirebase() {
+  if (getApps().length > 0) {
+    isInitialized = true;
+    return;
+  }
+
+  try {
+    // In production, Vercel will use service account from environment variables
+    // In development, you can use a service account key file
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+    if (!serviceAccountKey) {
+      console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set');
+      throw new Error('Firebase service account key is not configured');
+    }
+
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountKey);
+    } catch (parseError) {
+      console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', parseError);
+      throw new Error('Invalid Firebase service account key format');
+    }
+
+    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+      console.error('❌ Service account missing required fields');
+      throw new Error('Service account key is missing required fields');
+    }
+
     initializeApp({
       credential: cert(serviceAccount),
-      projectId: process.env.FIREBASE_PROJECT_ID || 'calycompta'
+      projectId: serviceAccount.project_id
     });
-  } else {
-    // Fallback to default credentials (works in Cloud environments)
-    initializeApp();
+
+    console.log('✅ Firebase Admin SDK initialized successfully');
+    isInitialized = true;
+  } catch (error: any) {
+    console.error('❌ Failed to initialize Firebase Admin SDK:', error);
+    initializationError = error;
+    throw error;
   }
 }
 
@@ -32,6 +61,18 @@ export default async function handler(
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  // Initialize Firebase if not already initialized
+  try {
+    initializeFirebase();
+  } catch (initError: any) {
+    console.error('❌ [activate-user API] Firebase initialization failed:', initError);
+    return res.status(500).json({
+      error: 'Server configuration error',
+      details: initError.message,
+      hint: 'Firebase Admin SDK initialization failed. Check server configuration.'
+    });
   }
 
   try {
@@ -183,9 +224,20 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('❌ [activate-user API] Unexpected error:', error);
+
+    // Return a more specific error message based on the error type
+    if (error.message?.includes('Firebase')) {
+      return res.status(500).json({
+        error: 'Configuration error: Firebase initialization failed',
+        details: error.message,
+        hint: 'Please check Firebase service account configuration'
+      });
+    }
+
     return res.status(500).json({
       error: 'Erreur lors de l\'activation de l\'utilisateur',
-      details: error.message
+      details: error.message || 'Unknown error occurred',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
