@@ -1,288 +1,364 @@
-# 📱 CalyCompta iOS Deployment Guide
+# 📱 CalyMob iOS Deployment Guide
 
-**Status**: ✅ CocoaPods & Basis Setup Compleet | 📋 Volgende Stappen
+**Status**: ✅ Apple Developer Account Approved | 🚀 Ready for Codemagic Setup
 
 ---
 
-## ✅ Voltooid
+## ✅ Completed
 
-### Fase 1: Ontwikkelomgeving
-- ✅ Apple Developer Account ($99/jaar)
-- ✅ Xcode 26.1 geïnstalleerd
-- ✅ Ruby 3.4.7 (via Homebrew)
-- ✅ CocoaPods 1.16.2
-- ✅ iOS Dependencies: 28 pods geïnstalleerd
-- ✅ iOS Deployment Target: iOS 15.0
+### Phase 1: Prerequisites
+- ✅ Apple Developer Account approved ($99/year)
+- ✅ iOS project configured
+- ✅ Bundle ID: `be.calypsodc.calymob`
+- ✅ App Name: CalyMob
+- ✅ Firebase iOS configuration exists (`GoogleService-Info.plist`)
 - ✅ Camera & Photo Library permissions in Info.plist
+- ✅ Codemagic account ready
+- ✅ Android build working in Codemagic
 
 ---
 
-## 📋 TODO: Volgende Stappen
+## 📋 Next Steps: iOS Deployment with Codemagic
 
-### Stap 1: Firebase iOS App Registreren
+### Step 1: Create App Store Connect API Key
 
-**1.1 Ga naar Firebase Console**
-- URL: https://console.firebase.google.com
-- Project: `calycompta`
+This allows Codemagic to automatically upload builds to TestFlight.
 
-**1.2 Registreer iOS App**
-1. Klik op "Add app" → iOS
-2. **iOS bundle ID**: `be.calypso.calycompta`
-   - ⚠️ Dit moet exact overeenkomen met Xcode project
-3. **App nickname**: CalyCompta iOS
-4. **App Store ID**: (Laat leeg voor nu)
+**1.1 Go to App Store Connect**
+- URL: https://appstoreconnect.apple.com/access/api
+- Sign in with your Apple Developer account
 
-**1.3 Download GoogleService-Info.plist**
-1. Download het bestand
-2. Plaats in `/Users/jan/Documents/GitHub/CalyCompta/calycompta_mobile/ios/Runner/`
-3. Controleer dat het bestand heet: `GoogleService-Info.plist` (hoofdlettergevoelig!)
+**1.2 Generate API Key**
+1. Click on the **"Keys"** tab
+2. Click **"+"** to generate a new key
+3. Fill in:
+   - **Name**: `Codemagic CI/CD`
+   - **Access**: **App Manager** (recommended) or Developer
+4. Click **"Generate"**
 
-**1.4 Voeg bestand toe aan Xcode**
-```bash
-# Open Xcode project
-cd /Users/jan/Documents/GitHub/CalyCompta/calycompta_mobile
-open ios/Runner.xcworkspace
+**1.3 Download and Save** ⚠️ IMPORTANT
+1. **Click "Download API Key" immediately** - you can only download once!
+2. Save the `.p8` file securely (e.g., `/Users/jan/Documents/CalyMob_API_Key/`)
+3. Note down from the page:
+   - **Issuer ID** (at top, format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
+   - **Key ID** (in key row, format: `XXXXXXXXXX`)
+
+**Example**:
 ```
-
-In Xcode:
-- Right-click op "Runner" folder (links in sidebar)
-- Kies "Add Files to Runner..."
-- Selecteer `GoogleService-Info.plist`
-- ✅ Vink "Copy items if needed" aan
-- ✅ Vink "Runner" target aan
-- Klik "Add"
-
----
-
-### Stap 2: Bundle Identifier Configureren
-
-**In Xcode (Runner.xcworkspace moet open zijn):**
-
-1. Klik op "Runner" project (blauw icon, linksboven)
-2. Selecteer "Runner" target (onder TARGETS)
-3. Ga naar "Signing & Capabilities" tab
-4. **Team**: Selecteer je Apple Developer Account email
-5. **Bundle Identifier**: Verander naar `be.calypso.calycompta`
-6. ✅ "Automatically manage signing" moet aangevinkt zijn
-
-**Troubleshooting:**
-- Als "Failed to register bundle identifier": Bundle ID is al in gebruik
-  - Probeer: `be.calypso.calycompta.app` of `be.calypso.calycomptamobile`
-  - Update ook in Firebase Console!
-
----
-
-### Stap 3: App Display Name Aanpassen
-
-**In Xcode:**
-1. Klik op "Runner" project → "Runner" target
-2. Ga naar "General" tab
-3. **Display Name**: Verander naar `CalyCompta`
-4. **Version**: `1.0.0`
-5. **Build**: `1`
-
----
-
-### Stap 4: App Icon Toevoegen (Optioneel maar Aanbevolen)
-
-**Handmatige methode:**
-1. Gebruik bestaand logo: `/Users/jan/Documents/GitHub/CalyCompta/calycompta_mobile/assets/images/logo-vertical.png`
-2. Converteer naar 1024x1024 PNG (gebruik Preview of online tool)
-3. In Xcode: klik op `Assets.xcassets`
-4. Klik op `AppIcon`
-5. Drag & drop 1024x1024 image in "App Store iOS" slot
-
-**Quick tool:**
-```bash
-# Via browser: https://appicon.co
-# Upload logo-vertical.png
-# Download iOS icon set
-# Extract en plaats in Assets.xcassets/AppIcon.appiconset/
+Issuer ID: 12345678-1234-1234-1234-123456789012
+Key ID: ABC1234DEF
+File: AuthKey_ABC1234DEF.p8
 ```
 
 ---
 
-### Stap 5: Test Build (Lokaal op Simulator)
+### Step 2: Add API Key to Codemagic
 
-```bash
-cd /Users/jan/Documents/GitHub/CalyCompta/calycompta_mobile
+**2.1 Go to Codemagic Teams Settings**
+- URL: https://codemagic.io/teams
+- Click on your team name
+- Navigate to **"Integrations"** in left sidebar
 
-# Check Flutter status
-~/development/flutter/bin/flutter doctor -v
+**2.2 Add App Store Connect Integration**
+1. Scroll to **"App Store Connect"** section
+2. Click **"Add key"** or **"Connect"**
+3. Fill in the three values from Step 1:
+   - **Issuer ID**: Paste the UUID from App Store Connect
+   - **Key ID**: Paste the 10-character key ID  
+   - **API Key**: Click "Choose file" and upload the `.p8` file
+4. Click **"Save"**
 
-# Clean build
-~/development/flutter/bin/flutter clean
-~/development/flutter/bin/flutter pub get
-
-# Build voor iOS (simulator test)
-~/development/flutter/bin/flutter build ios --release --no-codesign
-
-# Of run op simulator
-~/development/flutter/bin/flutter run -d "iPhone 15 Pro" --release
-```
-
-**Verwachte output:**
-```
-✓ Built build/ios/iphoneos/Runner.app
-```
+✅ Codemagic can now automatically:
+- Sign your iOS builds
+- Upload to TestFlight
+- Manage provisioning profiles
+- Handle certificates
 
 ---
 
-### Stap 6: Echte Device Test (Optioneel)
+### Step 3: Update codemagic.yaml for iOS
 
-**Vereist:** iPhone met USB kabel
+I'll add an iOS build workflow to your `codemagic.yaml` file.
 
-```bash
-# List connected devices
-~/development/flutter/bin/flutter devices
-
-# Run op fysieke iPhone
-~/development/flutter/bin/flutter run -d <device-id> --release
-```
-
-**Eerste keer:**
-- iPhone zal waarschuwen: "Untrusted Developer"
-- Ga op iPhone naar: Settings → General → VPN & Device Management
-- Trust je developer certificate
+**What it will do**:
+- Build iOS IPA file (signed for App Store)
+- Upload to TestFlight automatically
+- Email you when complete
+- Manual trigger only (like Android)
 
 ---
 
-### Stap 7: TestFlight Build
+### Step 4: Create App in App Store Connect
 
-**7.1 Archive maken in Xcode**
-1. Zorg dat "Any iOS Device (arm64)" geselecteerd is (niet simulator!)
-2. Product menu → Archive
-3. Wacht ~10-20 minuten (eerste keer duurt lang)
+Before building, you need to create the app entry in App Store Connect.
 
-**7.2 Upload naar App Store Connect**
-1. Xcode Organizer opent automatisch
-2. Selecteer je archive
-3. Klik "Distribute App"
-4. Kies "App Store Connect"
-5. Klik "Upload"
-6. Wacht ~5-10 minuten voor upload
+**4.1 Go to App Store Connect**
+- URL: https://appstoreconnect.apple.com
+- Click **"My Apps"**
 
-**7.3 App Store Connect Setup**
-1. Ga naar https://appstoreconnect.apple.com
-2. Klik "My Apps" → "+" → "New App"
-3. Vul in:
-   - **Platform**: iOS
-   - **Name**: CalyCompta
-   - **Primary Language**: French
-   - **Bundle ID**: be.calypso.calycompta (moet exact matchen!)
-   - **SKU**: CALYCOMPTA001
+**4.2 Create New App**
+1. Click **"+"** button → **"New App"**
+2. Fill in:
+   - **Platforms**: ☑️ iOS
+   - **Name**: `CalyMob`
+   - **Primary Language**: French (France)
+   - **Bundle ID**: Select `be.calypsodc.calymob`
+     - If not in dropdown, it will be registered on first build
+   - **SKU**: `calymob-001` (internal identifier, your choice)
    - **User Access**: Full Access
+3. Click **"Create"**
 
-**7.4 TestFlight Configureren**
-1. Ga naar "TestFlight" tab
-2. Wacht tot build status = "Ready to Submit"
-3. Klik op build → "External Testing" (of "Internal Testing")
-4. Voeg testers toe:
-   - Email adressen van je 5-6 gebruikers
-   - Ze ontvangen uitnodiging via email
-5. Klik "Start Testing"
+**4.3 App Information** (Basic, can complete later)
+- **Subtitle** (optional): Calypso Diving Club
+- **Category**: 
+  - Primary: **Productivity**
+  - Secondary: **Business** (optional)
+- **Content Rights**: No third-party content
+
+You can fill in detailed store listing later. For now, just create the app so Codemagic can upload builds.
 
 ---
 
-### Stap 8: Gebruikers Uitnodigen
+### Step 5: Trigger iOS Build in Codemagic
 
-**Email naar testers:**
+Once Steps 1-4 are complete:
 
+**5.1 Push Updated codemagic.yaml**
+```bash
+cd /Users/jan/Documents/GitHub/CalyMob
+git add codemagic.yaml
+git commit -m "Add iOS build workflow"
+git push origin main
 ```
-Subject: TestFlight Uitnodiging - CalyCompta iOS App
 
-Beste [Naam],
+**5.2 Trigger Build in Codemagic**
+1. Go to Codemagic app page
+2. Click **"Start new build"**
+3. Select workflow: `ios-manual-build`
+4. Select branch: `main`
+5. Click **"Start new build"**
 
-Je bent uitgenodigd om de CalyCompta iOS app te testen via TestFlight.
+**5.3 Wait for Build**
+- Build time: ~15-30 minutes (first time)
+- You'll receive email when complete
+- Check for errors in build logs
 
-Stappen:
-1. Download "TestFlight" app uit de App Store
-2. Open de uitnodigingslink in je email van Apple
-3. Installeer CalyCompta via TestFlight
-4. Login met je bestaande CalyCompta credentials
+**5.4 Check TestFlight**
+1. Go to App Store Connect → Your App → **TestFlight** tab
+2. Build will appear under **"iOS Builds"**
+3. Wait for **"Processing"** to complete (~10-30 min)
+4. Status will change to **"Ready to Submit"** or **"Ready to Test"**
 
-De app werkt hetzelfde als de web versie, maar nu met:
-- Camera toegang voor bonnetjes
-- Foto's uit je bibliotheek
-- Native iOS ervaring
+---
 
-Bij problemen, laat het me weten!
+### Step 6: Set Up TestFlight Testing
 
-Groet,
-Jan
+**6.1 Internal Testing** (Recommended First)
+1. In App Store Connect → TestFlight
+2. Click **"Internal Testing"** in sidebar
+3. Click **"+"** next to "Internal Group"
+4. Create group: **"Calypso DC Team"**
+5. Add testers:
+   - Click **"+"** next to Testers
+   - Add email addresses (must have Apple IDs)
+   - Up to 100 internal testers (free)
+6. Enable **"Automatic Distribution"** for new builds
+7. Click **"Save"**
+
+**6.2 Testers Receive Email**
+- Apple sends invitation automatically
+- Testers must:
+  1. Download **TestFlight** app from App Store
+  2. Accept invitation from email
+  3. Install CalyMob from TestFlight
+
+**6.3 External Testing** (Optional - Public Beta)
+- Requires App Review (1-2 days)
+- Up to 10,000 external testers
+- Can share public link
+- Use for wider club member testing
+
+---
+
+### Step 7: Test the iOS App
+
+**7.1 Install via TestFlight**
+1. On your iPhone, open App Store
+2. Search and install **"TestFlight"**
+3. Open TestFlight
+4. Accept invitation for CalyMob
+5. Tap **"Install"**
+
+**7.2 Test Core Features**
+- ✅ Login with Firebase credentials
+- ✅ View expenses list
+- ✅ Add new expense
+- ✅ Take photo with camera
+- ✅ Upload receipt photo
+- ✅ View operations list
+- ✅ Sync with web app
+
+**7.3 Report Issues**
+- TestFlight has built-in feedback mechanism
+- Take screenshots of issues
+- TestFlight captures crash logs automatically
+
+---
+
+### Step 8: Submit to App Store (Optional)
+
+If you want CalyMob publicly available in App Store (not just TestFlight):
+
+**8.1 Complete Store Listing**
+In App Store Connect → Your App:
+
+1. **App Information**:
+   - Privacy Policy URL (required)
+   - Category: Productivity
+   - Contact information
+
+2. **Pricing and Availability**:
+   - Price: Free
+   - Availability: Belgium (or worldwide)
+
+3. **App Privacy**:
+   - Complete privacy questionnaire
+   - Data types collected: Name, Email, Photos
+
+4. **Prepare for Submission**:
+   - Screenshots (minimum 1, max 10)
+     - iPhone 6.7" (2796 x 1290 px)
+   - App Description (in French)
+   - Keywords
+   - Support URL
+   - Marketing URL (optional)
+
+**8.2 Screenshots**
+
+Take screenshots using iOS Simulator or real device:
+
+**On Mac with Simulator**:
+```bash
+# Open simulator
+open -a Simulator
+
+# Select device: iPhone 15 Pro Max
+# Run app
+cd /Users/jan/Documents/GitHub/CalyMob
+flutter run -d "iPhone 15 Pro Max"
+
+# Take screenshots with Cmd+S
+# Screenshots saved to Desktop
 ```
+
+**Required Screenshots** (for 6.7" iPhone):
+1. Login screen
+2. Home/Dashboard
+3. Expenses list
+4. Add expense form
+5. Operations view
+
+**8.3 App Review Information**
+- **Sign-in required**: Yes
+- **Demo account**:
+  - Email: [create demo account]
+  - Password: [demo password]
+- **Notes for reviewer**: "App for Calypso Diving Club members"
+
+**8.4 Submit for Review**
+1. Complete all required fields
+2. Select build from TestFlight
+3. Click **"Add for Review"**
+4. Click **"Submit to App Review"**
+
+**8.5 Review Timeline**
+- Average: 24-48 hours
+- Can take up to 7 days
+- First submission often gets questions
+- Be ready to respond quickly
+
+---
+
+## 🎯 Quick Summary
+
+### What You Need:
+1. ✅ Apple Developer Account ($99/year) - **DONE**
+2. ⏳ App Store Connect API Key (.p8 file)
+3. ⏳ API Key added to Codemagic
+4. ⏳ App created in App Store Connect
+5. ��� iOS workflow enabled in codemagic.yaml
+6. ⏳ Build triggered in Codemagic
+7. ⏳ TestFlight configured
+8. ⏳ Testers invited
+
+### Timeline:
+- **API Key setup**: 10 minutes
+- **Codemagic configuration**: 15 minutes
+- **App Store Connect setup**: 20 minutes
+- **First build**: 20-30 minutes
+- **TestFlight processing**: 10-30 minutes
+- **Ready for testing**: ~1.5-2 hours total
+
+### Costs:
+- Apple Developer: $99/year
+- TestFlight: Free (unlimited)
+- App Store publishing: Free (included)
+- **Total**: $99/year
 
 ---
 
 ## 🔧 Troubleshooting
 
-### "No valid code signing identity found"
-→ Controleer dat je Team correct geselecteerd is in Xcode
+### "No App Store Connect API key found"
+**Solution**: Add API key in Codemagic Teams → Integrations → App Store Connect
 
-### "Bundle identifier is already in use"
-→ Kies andere bundle ID (bijv. be.calypso.calycompta.app)
+### "Bundle ID not found"
+**Solution**: The bundle ID `be.calypsodc.calymob` will be auto-registered on first build
 
-### "CocoaPods could not find compatible versions"
-→ Dit is al opgelost (iOS 15.0 platform in Podfile)
+### "Code signing failed"
+**Solution**: 
+1. Verify API key is correctly added to Codemagic
+2. Check that your Apple Developer account is active
+3. Try automatic signing in Codemagic
 
-### "Missing GoogleService-Info.plist"
-→ Controleer dat bestand in ios/Runner/ staat EN toegevoegd is in Xcode
+### "Missing compliance"
+**Question in App Store Connect**: "Does your app use encryption?"
+**Answer**: Yes, but exempt (only uses standard HTTPS)
+- Select "Yes" → "No" to custom encryption
 
-### "Archive failed - signing error"
-→ Ga naar Xcode → Preferences → Accounts → Download Manual Profiles
+### "Build processing failed"
+**Solution**: Check build logs in Codemagic for specific error
+- Common: Missing dependencies, CocoaPods issues
+- Usually fixed by updating Podfile.lock
 
 ---
 
-## 📞 Support Resources
+## 📞 Resources
 
-- **Apple Developer**: https://developer.apple.com/support/
-- **Firebase iOS Setup**: https://firebase.google.com/docs/ios/setup
-- **Flutter iOS Deployment**: https://docs.flutter.dev/deployment/ios
+- **App Store Connect**: https://appstoreconnect.apple.com
+- **Apple Developer Portal**: https://developer.apple.com
+- **Codemagic iOS Docs**: https://docs.codemagic.io/yaml-code-signing/signing-ios/
 - **TestFlight Guide**: https://developer.apple.com/testflight/
+- **Flutter iOS Deployment**: https://docs.flutter.dev/deployment/ios
 
 ---
 
-## 💰 Kosten Overzicht
+## ✅ Current Status
 
-| Item | Kost | Frequentie |
-|------|------|------------|
-| Apple Developer | $99 | Per jaar |
-| TestFlight | Gratis | Onbeperkt |
-| App Store Publicatie | Gratis | Optioneel |
-
-**Totaal Year 1**: $99
-
----
-
-## ⏱️ Tijdsinschatting
-
-| Fase | Duur |
-|------|------|
-| Firebase Config | 15 min |
-| Xcode Setup | 30 min |
-| Test Build | 20 min |
-| Archive & Upload | 1-2 uur |
-| TestFlight Activatie | 30 min |
-| **TOTAAL** | **~3-4 uur** |
-
-*+ Apple processing tijd: 5-30 min na upload*
+- [x] Apple Developer Account approved
+- [x] iOS project configured (bundle ID, Firebase)
+- [ ] App Store Connect API key created
+- [ ] API key added to Codemagic
+- [ ] App created in App Store Connect
+- [ ] iOS workflow enabled in codemagic.yaml
+- [ ] First iOS build successful
+- [ ] TestFlight configured
+- [ ] App tested on iOS device
+- [ ] **LIVE on TestFlight** 🎉
 
 ---
 
-## 🎯 Huidige Status
+**Next Action**: Go to https://appstoreconnect.apple.com/access/api and create an API key for Codemagic.
 
-- [x] Ontwikkelomgeving klaar
-- [x] CocoaPods dependencies
-- [x] iOS permissions configured
-- [ ] Firebase iOS app registered
-- [ ] GoogleService-Info.plist toegevoegd
-- [ ] Bundle ID configured in Xcode
-- [ ] Test build succesvol
-- [ ] Archive gemaakt
-- [ ] Uploaded naar TestFlight
-- [ ] Testers uitgenodigd
-- [ ] **LIVE** 🎉
-
----
-
-**Volgende concrete actie**: Ga naar Firebase Console en registreer iOS app met bundle ID `be.calypso.calycompta`
+**Document Created**: 2025-11-14
+**Last Updated**: 2025-11-14

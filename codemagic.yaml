@@ -404,6 +404,97 @@ workflows:
           success: true
           failure: true
 
+  # ==========================================================================
+  # iOS MANUAL BUILD WORKFLOW - On-Demand iOS Builds
+  # ==========================================================================
+  ios-manual-build:
+    name: Manual Build (iOS Only)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      # iOS Code Signing - Automatic via App Store Connect API
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: be.calypsodc.calymob
+
+      # Flutter Version
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    # Manual trigger only (no automatic triggers)
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: '*'
+          include: false
+
+    scripts:
+      - name: Set up environment
+        script: |
+          echo "🚀 Starting iOS manual build"
+          echo "Flutter version:"
+          flutter --version
+          echo "Xcode version:"
+          xcodebuild -version
+
+      - name: Verify Firebase configuration
+        script: |
+          echo "🔧 Checking iOS Firebase configuration"
+          if [ ! -f "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist" ]; then
+            echo "❌ ERROR: GoogleService-Info.plist not found!"
+            exit 1
+          fi
+          echo "✅ GoogleService-Info.plist exists"
+          ls -la $CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist
+
+      - name: Get Flutter packages
+        script: |
+          echo "📦 Getting Flutter packages"
+          flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: |
+          echo "📦 Installing iOS dependencies"
+          cd ios
+          pod install
+          cd ..
+
+      - name: Build iOS IPA
+        script: |
+          echo "🏗️ Building iOS IPA (release mode)"
+          flutter build ipa --release
+          echo "✅ iOS build completed!"
+          ls -lh build/ios/ipa/*.ipa
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+
+    publishing:
+      email:
+        recipients:
+          - jan.andriessens@gmail.com
+        notify:
+          success: true
+          failure: true
+
+      app_store_connect:
+        # Uses App Store Connect API key from Team Integrations
+        auth: integration
+
+        # Automatically submit to TestFlight
+        submit_to_testflight: true
+
+        # Optional: Specify beta groups
+        # beta_groups:
+        #   - Internal Testers
+
+        # Don't auto-submit to App Store (manual review recommended)
+        submit_to_app_store: false
+
 # ============================================================================
 # END OF CONFIGURATION
 # ============================================================================
