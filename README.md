@@ -95,3 +95,4 @@ flutter build appbundle  # Android
 ## Contact
 
 For questions about the mobile app or integration with the web application, see the main CalyCompta documentation.
+# Trigger rebuild $(date)
