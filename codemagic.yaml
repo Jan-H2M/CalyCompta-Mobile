@@ -413,6 +413,10 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
+      # Reference to App Store Connect integration
+      integrations:
+        app_store_connect: codemagic
+
       # iOS Code Signing - Automatic via App Store Connect API
       ios_signing:
         distribution_type: app_store
