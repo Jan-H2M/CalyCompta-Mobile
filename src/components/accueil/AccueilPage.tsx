@@ -11,6 +11,7 @@ interface DivingQuote {
 }
 
 // Tableau des 79 citations sur la mer et la plongée (liste nettoyée)
+// Deployment test: Project successfully migrated to root structure - Nov 2024
 const DIVING_QUOTES: DivingQuote[] = [
   {
     text: "La mer, une fois qu'elle jette son sort, vous tient à jamais dans son filet d'émerveillement.",
