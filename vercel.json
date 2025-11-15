@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd calycompta-app && npm install && npm run build",
+  "outputDirectory": "calycompta-app/dist",
+  "installCommand": "cd calycompta-app && npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/((?!.*\\.(js|mjs|jsx|ts|tsx|css|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|webp|avif)).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
