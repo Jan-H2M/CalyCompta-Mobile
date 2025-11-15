@@ -56,7 +56,7 @@ Regarde dans la liste des **Composite Indexes** (Index composites):
 Lance cette commande et note le temps de réponse:
 
 ```bash
-time curl -s -X POST https://caly-compta.vercel.app/api/run-communication-jobs \
+time curl -s -X POST https://calycompta.vercel.app/api/run-communication-jobs \
   -H "Authorization: Bearer xR7mK9pL3nV8qT2wY6sB4hF1jD5gA9zE0uN3vC8xM=" \
   -H "Content-Type: application/json"
 ```

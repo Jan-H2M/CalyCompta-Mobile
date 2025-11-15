@@ -1,0 +1,629 @@
+/**
+ * Email Template System Types
+ * Phase 1: MVP - Basic template storage and editing
+ */
+
+import { Timestamp } from 'firebase/firestore';
+
+/**
+ * Email template type/category
+ */
+export type EmailTemplateType =
+  | 'pending_demands'      // Rappel demandes en attente
+  | 'accounting_codes'     // Codes comptables quotidiens
+  | 'events'               // Événements
+  | 'transactions'         // Transactions
+  | 'members'              // Membres
+  | 'custom';              // Personnalisé
+
+/**
+ * Variable type for template rendering
+ */
+export type VariableType = 'string' | 'number' | 'date' | 'boolean' | 'array' | 'object';
+
+/**
+ * Template variable definition
+ */
+export interface EmailTemplateVariable {
+  name: string;                    // Variable name (e.g., "recipientName")
+  type: VariableType;
+  required: boolean;
+  description: string;             // Help text for users
+  defaultValue?: any;
+  example?: string;                // Example value for preview
+}
+
+/**
+ * Template styling configuration
+ */
+export interface EmailTemplateStyles {
+  primaryColor: string;            // Hex color (e.g., "#3B82F6")
+  secondaryColor?: string;
+  headerGradient?: string;         // CSS gradient (e.g., "linear-gradient(135deg, #1E40AF, #3B82F6)")
+  buttonColor?: string;
+  buttonTextColor?: string;
+  fontFamily?: string;             // CSS font-family
+}
+
+/**
+ * Email Template
+ * Stored in Firestore: /clubs/{clubId}/email_templates/{templateId}
+ */
+export interface EmailTemplate {
+  id: string;
+
+  // Basic info
+  name: string;                    // Display name: "Rappel Demandes Détaillé"
+  description: string;             // Purpose/usage description
+  emailType: EmailTemplateType;
+
+  // Content (editable by user)
+  subject: string;                 // Email subject with {{variables}}
+  htmlContent: string;             // Full HTML template with {{variables}}
+  previewText?: string;            // Email preview text (inbox summary)
+
+  // Variables
+  variables: EmailTemplateVariable[];
+
+  // Styling
+  styles: EmailTemplateStyles;
+
+  // Metadata
+  createdAt: Date | Timestamp;
+  updatedAt: Date | Timestamp;
+  createdBy: string;               // User ID who created
+  updatedBy?: string;              // User ID who last updated
+
+  // Status
+  isActive: boolean;               // Can be used in jobs
+  isDefault?: boolean;             // Default template for this emailType
+
+  // Usage tracking
+  lastUsed?: Date | Timestamp;
+  usageCount: number;              // How many jobs use this template
+}
+
+/**
+ * Sample data for template preview
+ */
+export interface EmailTemplateSampleData {
+  id: string;
+  name: string;                    // Sample data set name: "Exemple avec 3 demandes"
+  description: string;
+  emailType: EmailTemplateType;
+  data: Record<string, any>;       // Actual sample data
+}
+
+/**
+ * Template rendering result
+ */
+export interface TemplateRenderResult {
+  success: boolean;
+  html?: string;
+  error?: string;
+  missingVariables?: string[];     // Variables used in template but not provided in data
+}
+
+/**
+ * Default template styles (Calypso branding)
+ */
+export const DEFAULT_TEMPLATE_STYLES: EmailTemplateStyles = {
+  primaryColor: '#3B82F6',          // Blue-500
+  secondaryColor: '#1E40AF',        // Blue-800
+  headerGradient: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
+  buttonColor: '#3B82F6',
+  buttonTextColor: '#FFFFFF',
+  fontFamily: 'Arial, sans-serif',
+};
+
+/**
+ * Variable definitions for "accounting_codes" template type
+ */
+export const ACCOUNTING_CODES_VARIABLES: EmailTemplateVariable[] = [
+  // Single variables
+  {
+    name: 'recipientName',
+    type: 'string',
+    required: true,
+    description: 'Nom du destinataire',
+    example: 'Jean Dupont',
+  },
+  {
+    name: 'clubName',
+    type: 'string',
+    required: true,
+    description: 'Nom du club',
+    example: 'Calypso Diving Club',
+  },
+  {
+    name: 'date',
+    type: 'string',
+    required: true,
+    description: 'Date du rapport',
+    example: '09/11/2025',
+  },
+  {
+    name: 'totalTransactions',
+    type: 'number',
+    required: false,
+    description: 'Nombre total de transactions',
+    example: '12',
+  },
+  {
+    name: 'totalAmount',
+    type: 'number',
+    required: false,
+    description: 'Montant total des transactions',
+    example: '1245.50',
+  },
+  {
+    name: 'appUrl',
+    type: 'string',
+    required: true,
+    description: 'URL de l\'application',
+    example: 'https://calycompta.vercel.app',
+  },
+
+  // Array variable (for loops)
+  {
+    name: 'accountingCodes',
+    type: 'array',
+    required: true,
+    description: 'Liste des codes comptables avec leurs transactions',
+    example: JSON.stringify([
+      {
+        code: '6000',
+        description: 'Achats de marchandises',
+        transactionCount: 3,
+        totalAmount: 450.00,
+        transactions: [
+          {
+            date: '09/11/2025',
+            description: 'Matériel plongée',
+            montant: 150.00,
+            contrepartie: 'Dive Shop Brussels',
+          },
+        ],
+      },
+    ], null, 2),
+  },
+];
+
+/**
+ * Variable definitions for "pending_demands" template type
+ */
+export const PENDING_DEMANDS_VARIABLES: EmailTemplateVariable[] = [
+  // Single variables
+  {
+    name: 'recipientName',
+    type: 'string',
+    required: true,
+    description: 'Nom du destinataire',
+    example: 'Jean Dupont',
+  },
+  {
+    name: 'clubName',
+    type: 'string',
+    required: true,
+    description: 'Nom du club',
+    example: 'Calypso Diving Club',
+  },
+  {
+    name: 'totalAmount',
+    type: 'number',
+    required: false,
+    description: 'Montant total des demandes',
+    example: '245.50',
+  },
+  {
+    name: 'urgentCount',
+    type: 'number',
+    required: false,
+    description: 'Nombre de demandes urgentes (> 7 jours)',
+    example: '2',
+  },
+  {
+    name: 'demandesCount',
+    type: 'number',
+    required: false,
+    description: 'Nombre total de demandes',
+    example: '5',
+  },
+  {
+    name: 'appUrl',
+    type: 'string',
+    required: true,
+    description: 'URL de l\'application',
+    example: 'https://calycompta.vercel.app',
+  },
+
+  // Array variable (for loops)
+  {
+    name: 'demandes',
+    type: 'array',
+    required: true,
+    description: 'Liste des demandes de remboursement',
+    example: JSON.stringify([
+      {
+        id: 'abc123',
+        date_depense: '15/10/2025',
+        demandeur_nom: 'Jan Andriessens',
+        description: 'Facture hébergement serveur OVH',
+        montant: 125.00,
+        daysWaiting: 5,
+        isUrgent: false,
+      },
+    ], null, 2),
+  },
+];
+
+/**
+ * Default template for "accounting_codes" type
+ */
+export const DEFAULT_ACCOUNTING_CODES_TEMPLATE = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #374151; max-width: 800px; margin: 0 auto; padding: 20px;">
+
+  <!-- Header -->
+  <div style="background: {{headerGradient}}; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="margin: 0; font-size: 24px;">📊 Rapport Codes Comptables</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9;">{{clubName}} - {{date}}</p>
+  </div>
+
+  <!-- Body -->
+  <div style="background: white; padding: 30px; border: 1px solid #E5E7EB; border-top: none;">
+    <p style="font-size: 16px; margin-bottom: 20px;">Bonjour {{recipientName}},</p>
+
+    <!-- Summary Box -->
+    <div style="background: #EFF6FF; border-left: 4px solid {{primaryColor}}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0; font-size: 16px; font-weight: 600;">
+        Résumé du {{date}}
+      </p>
+      <p style="margin: 5px 0 0 0; font-size: 14px;">
+        <strong>{{totalTransactions}}</strong> transaction(s) pour un total de <strong>{{totalAmount}} €</strong>
+      </p>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-bottom: 20px;">
+      Voici la liste des codes comptables utilisés aujourd'hui avec leurs transactions associées:
+    </p>
+
+    <!-- Accounting Codes List -->
+    {{#each accountingCodes}}
+    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+        <div>
+          <h3 style="margin: 0; font-size: 18px; color: {{../primaryColor}};">
+            {{this.code}} - {{this.description}}
+          </h3>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #6B7280;">
+            {{this.transactionCount}} transaction(s)
+          </p>
+        </div>
+        <div style="text-align: right;">
+          <p style="margin: 0; font-size: 20px; font-weight: 700; color: #1F2937;">
+            {{this.totalAmount}} €
+          </p>
+        </div>
+      </div>
+
+      <!-- Transactions Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="background-color: #FFFFFF;">
+            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Date</th>
+            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Description</th>
+            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Contrepartie</th>
+            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Montant</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each this.transactions}}
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; font-size: 13px;">{{this.date}}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; font-size: 13px;">{{this.description}}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; font-size: 13px;">{{this.contrepartie}}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: right; font-weight: 600; font-size: 13px;">{{this.montant}} €</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{/each}}
+
+    <!-- CTA Button -->
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{appUrl}}/transactions" style="display: inline-block; background: {{buttonColor}}; color: {{buttonTextColor}}; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        ➜ Voir toutes les transactions
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #6B7280; margin-bottom: 10px;">
+      <em>Ce rapport automatique est envoyé selon votre configuration dans Paramètres → Communication.</em>
+    </p>
+
+    <p style="font-size: 14px; margin: 0;">
+      Cordialement,<br>
+      <strong>{{clubName}}</strong>
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="background: #F9FAFB; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #E5E7EB; border-top: none;">
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
+      CalyCompta - Gestion comptable pour clubs de plongée
+    </p>
+  </div>
+</body>
+</html>
+`.trim();
+
+/**
+ * Default template for "pending_demands" type
+ * This serves as a starting point for users
+ */
+export const DEFAULT_PENDING_DEMANDS_TEMPLATE = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #374151; max-width: 800px; margin: 0 auto; padding: 20px;">
+
+  <!-- Header -->
+  <div style="background: {{headerGradient}}; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="margin: 0; font-size: 24px;">📧 Demandes de remboursement en attente</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9;">{{clubName}}</p>
+  </div>
+
+  <!-- Body -->
+  <div style="background: white; padding: 30px; border: 1px solid #E5E7EB; border-top: none;">
+    <p style="font-size: 16px; margin-bottom: 20px;">Bonjour {{recipientName}},</p>
+
+    <!-- Summary Box -->
+    <div style="background: #EFF6FF; border-left: 4px solid {{primaryColor}}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0; font-size: 16px; font-weight: 600;">
+        {{demandesCount}} demande(s) de remboursement en attente de validation
+      </p>
+      <p style="margin: 5px 0 0 0; font-size: 14px;">
+        Montant total: <strong>{{totalAmount}} €</strong>
+      </p>
+    </div>
+
+    <!-- Table -->
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <thead>
+        <tr style="background-color: #F3F4F6;">
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600;">Date</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600;">Demandeur</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600;">Description</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #E5E7EB; font-weight: 600;">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each demandes}}
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #E5E7EB;">{{this.date_depense}}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #E5E7EB;">{{this.demandeur_nom}}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #E5E7EB;">{{this.description}}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #E5E7EB; text-align: right; font-weight: 600;">{{this.montant}} €</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <!-- CTA Button -->
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{appUrl}}/depenses" style="display: inline-block; background: {{buttonColor}}; color: {{buttonTextColor}}; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        ➜ Consulter les demandes
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #6B7280; margin-bottom: 10px;">
+      <em>Ce rappel automatique est envoyé selon votre configuration dans Paramètres → Communication.</em>
+    </p>
+
+    <p style="font-size: 14px; margin: 0;">
+      Cordialement,<br>
+      <strong>{{clubName}}</strong>
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="background: #F9FAFB; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #E5E7EB; border-top: none;">
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
+      CalyCompta - Gestion comptable pour clubs de plongée
+    </p>
+  </div>
+</body>
+</html>
+`.trim();
+
+/**
+ * Sample data for preview (accounting codes)
+ */
+export const ACCOUNTING_CODES_SAMPLE_DATA: EmailTemplateSampleData = {
+  id: 'sample-accounting-codes',
+  name: 'Exemple avec 3 codes comptables',
+  description: 'Données de test pour prévisualiser le template',
+  emailType: 'accounting_codes',
+  data: {
+    recipientName: 'Jean Dupont',
+    clubName: 'Calypso Diving Club',
+    date: '09/11/2025',
+    totalTransactions: 7,
+    totalAmount: 1245.50,
+    appUrl: 'https://calycompta.vercel.app',
+    accountingCodes: [
+      {
+        code: '6000',
+        description: 'Achats de marchandises',
+        transactionCount: 3,
+        totalAmount: 450.00,
+        transactions: [
+          {
+            date: '09/11/2025',
+            description: 'Matériel plongée (palmes, masque)',
+            montant: 150.00,
+            contrepartie: 'Dive Shop Brussels',
+          },
+          {
+            date: '09/11/2025',
+            description: 'Détendeurs - maintenance',
+            montant: 200.00,
+            contrepartie: 'Aqua Service SPRL',
+          },
+          {
+            date: '09/11/2025',
+            description: 'Bouteilles de plongée (2x)',
+            montant: 100.00,
+            contrepartie: 'ScubaPro Belgium',
+          },
+        ],
+      },
+      {
+        code: '6100',
+        description: 'Services et biens divers',
+        transactionCount: 2,
+        totalAmount: 585.50,
+        transactions: [
+          {
+            date: '09/11/2025',
+            description: 'Hébergement serveur OVH',
+            montant: 125.00,
+            contrepartie: 'OVH SAS',
+          },
+          {
+            date: '09/11/2025',
+            description: 'Assurance plongée annuelle',
+            montant: 460.50,
+            contrepartie: 'DAN Europe',
+          },
+        ],
+      },
+      {
+        code: '7000',
+        description: 'Ventes et prestations de services',
+        transactionCount: 2,
+        totalAmount: 210.00,
+        transactions: [
+          {
+            date: '09/11/2025',
+            description: 'Cotisation membre - Marie Dupont',
+            montant: 150.00,
+            contrepartie: 'DUPONT MARIE',
+          },
+          {
+            date: '09/11/2025',
+            description: 'Sortie plongée Zeeland',
+            montant: 60.00,
+            contrepartie: 'MARTIN PIERRE',
+          },
+        ],
+      },
+    ],
+  },
+};
+
+/**
+ * Sample data for preview (pending demands)
+ */
+export const PENDING_DEMANDS_SAMPLE_DATA: EmailTemplateSampleData = {
+  id: 'sample-pending-demands',
+  name: 'Exemple avec 3 demandes',
+  description: 'Données de test pour prévisualiser le template',
+  emailType: 'pending_demands',
+  data: {
+    recipientName: 'Jean Dupont',
+    clubName: 'Calypso Diving Club',
+    totalAmount: 245.50,
+    urgentCount: 1,
+    demandesCount: 3,
+    appUrl: 'https://calycompta.vercel.app',
+    demandes: [
+      {
+        id: 'abc123',
+        date_depense: '15/10/2025',
+        demandeur_nom: 'Jan Andriessens',
+        description: 'Facture hébergement serveur OVH',
+        montant: 125.00,
+        daysWaiting: 5,
+        isUrgent: false,
+      },
+      {
+        id: 'def456',
+        date_depense: '20/10/2025',
+        demandeur_nom: 'Marie Dupont',
+        description: 'Matériel plongée (palmes, masque)',
+        montant: 60.50,
+        daysWaiting: 3,
+        isUrgent: false,
+      },
+      {
+        id: 'ghi789',
+        date_depense: '02/10/2025',
+        demandeur_nom: 'Pierre Martin',
+        description: 'Essence sortie plongée Zeeland',
+        montant: 60.00,
+        daysWaiting: 15,
+        isUrgent: true,
+      },
+    ],
+  },
+};
+
+/**
+ * Helper: Get variable definitions for a template type
+ */
+export function getVariablesForType(emailType: EmailTemplateType): EmailTemplateVariable[] {
+  switch (emailType) {
+    case 'pending_demands':
+      return PENDING_DEMANDS_VARIABLES;
+    case 'accounting_codes':
+      return ACCOUNTING_CODES_VARIABLES;
+    case 'custom':
+      return [];  // User defines their own variables
+    default:
+      return [];  // Phase 2: add more types
+  }
+}
+
+/**
+ * Helper: Get default template HTML for a type
+ */
+export function getDefaultTemplateForType(emailType: EmailTemplateType): string {
+  switch (emailType) {
+    case 'pending_demands':
+      return DEFAULT_PENDING_DEMANDS_TEMPLATE;
+    case 'accounting_codes':
+      return DEFAULT_ACCOUNTING_CODES_TEMPLATE;
+    default:
+      return '<html><body><h1>{{title}}</h1><p>{{content}}</p></body></html>';
+  }
+}
+
+/**
+ * Helper: Get sample data for a template type
+ */
+export function getSampleDataForType(emailType: EmailTemplateType): EmailTemplateSampleData | null {
+  switch (emailType) {
+    case 'pending_demands':
+      return PENDING_DEMANDS_SAMPLE_DATA;
+    case 'accounting_codes':
+      return ACCOUNTING_CODES_SAMPLE_DATA;
+    default:
+      return null;  // Phase 2: add more types
+  }
+}

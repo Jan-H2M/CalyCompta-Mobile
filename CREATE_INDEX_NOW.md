@@ -75,7 +75,7 @@ You should see in the index list:
 Once the index is **Enabled**, test the system:
 
 ```bash
-curl -s -X POST https://caly-compta.vercel.app/api/run-communication-jobs \
+curl -s -X POST https://calycompta.vercel.app/api/run-communication-jobs \
   -H "Authorization: Bearer xR7mK9pL3nV8qT2wY6sB4hF1jD5gA9zE0uN3vC8xM=" \
   -H "Content-Type: application/json"
 ```

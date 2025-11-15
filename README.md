@@ -30,7 +30,7 @@ npm run build
 
 The application is automatically deployed to Vercel on push to the main branch.
 
-- **Production URL**: https://caly-compta.vercel.app
+- **Production URL**: https://calycompta.vercel.app
 - **Deployment Platform**: Vercel
 - **API Functions**: Located in `calycompta-app/api/`
 

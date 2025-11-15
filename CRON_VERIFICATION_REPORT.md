@@ -53,7 +53,7 @@
   </table>
 
   <p>
-    <a href="https://caly-compta.vercel.app" style="...">
+    <a href="https://calycompta.vercel.app" style="...">
       Accéder à CalyCompta
     </a>
   </p>
@@ -285,7 +285,7 @@ return diff <= tolerance; // 10 <= 15 → TRUE ✅
 ## 📊 Monitoring
 
 ### Vercel Logs
-- **URL**: https://vercel.com/h2m/caly-compta/logs
+- **URL**: https://vercel.com/h2m/calycompta/logs
 - **Filter**: `run-communication-jobs`
 - **Check**: Execution every 15 minutes (15:45, 16:00, 16:15, etc.)
 

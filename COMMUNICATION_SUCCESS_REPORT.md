@@ -174,7 +174,7 @@ Total commits: 11
 ## 📊 Monitoring
 
 ### Vercel Logs
-- **URL**: https://vercel.com/h2m/caly-compta/logs
+- **URL**: https://vercel.com/h2m/calycompta/logs
 - **Filter**: `run-communication-jobs`
 - **Frequency**: Every 15 minutes
 

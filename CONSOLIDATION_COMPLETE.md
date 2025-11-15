@@ -8,9 +8,9 @@
 ## 📋 COMPLETED TASKS
 
 ### ✅ 1. Project Consolidation
-- **Kept:** h2m/caly-compta (Project ID: prj_K3kkT2u1tgVp3TAacL1FpNxTGVwH)
-- **Domain transferred:** caly.club now points to h2m/caly-compta
-- **Environment variables:** All critical vars present in h2m/caly-compta
+- **Kept:** h2m/calycompta (Project ID: prj_K3kkT2u1tgVp3TAacL1FpNxTGVwH)
+- **Domain transferred:** caly.club now points to h2m/calycompta
+- **Environment variables:** All critical vars present in h2m/calycompta
 
 ### ✅ 2. Backup Created
 - **File:** COMPLETE_VERCEL_BACKUP_2025-11-14.md
@@ -35,14 +35,14 @@
 
 ## ⚠️ REQUIRED ACTION: Add Missing Environment Variable
 
-The h2m/caly-compta project is missing one critical environment variable:
+The h2m/calycompta project is missing one critical environment variable:
 
 ```bash
 VITE_OPENAI_API_KEY="[REDACTED - Add your OpenAI API key here]"
 ```
 
 **To add it:**
-1. Go to https://vercel.com/h2m/caly-compta/settings/environment-variables
+1. Go to https://vercel.com/h2m/calycompta/settings/environment-variables
 2. Add the variable above for Production environment
 3. Redeploy the project
 
@@ -87,7 +87,7 @@ Before deleting old projects, verify:
 
 ## 📊 FINAL CONFIGURATION
 
-**Production Project:** h2m/caly-compta
+**Production Project:** h2m/calycompta
 **Production URL:** https://caly.club
 **Team:** H2M (Pro Plan)
 **Status:** ACTIVE
