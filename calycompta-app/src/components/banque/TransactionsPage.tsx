@@ -36,6 +36,10 @@ import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { ArchiveBanner } from '@/components/commun/ArchiveBanner';
 import { ProtectedAction } from '@/components/commun/ProtectedAction';
 import { useKeyboardNavigation, getNavigationPosition } from '@/hooks/useKeyboardNavigation';
+import { FilterAccordionWithTabs } from '@/components/common/FilterAccordionWithTabs';
+import { ComboBox } from '@/components/common/ComboBox';
+import { Tooltip } from '@/components/common/Tooltip';
+import { calypsoAccountCodes } from '@/config/calypso-accounts';
 
 // Données de démonstration - vide pour commencer avec des vraies données
 const demoTransactions: TransactionBancaire[] = [];
@@ -209,7 +213,6 @@ export function TransactionsPage() {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [demands, setDemands] = useState<DemandeRemboursement[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [accountCodeFilter, setAccountCodeFilter] = useState<'all' | 'with' | 'without'>('all');
   const [activeTab, setActiveTab] = useState<'all' | 'income' | 'expense'>('all');
   const [reconciliationFilter, setReconciliationFilter] = useState<'all' | 'reconciled' | 'unreconciled' | 'not_found'>('all');
@@ -217,6 +220,20 @@ export function TransactionsPage() {
   const [amountValue1, setAmountValue1] = useState<string>('');
   const [amountValue2, setAmountValue2] = useState<string>('');
   const [showAmountFilterHelp, setShowAmountFilterHelp] = useState(false);
+
+  // Enhanced filter states
+  const [transactionStatus, setTransactionStatus] = useState<'all' | 'accepte' | 'refuse' | 'en_attente'>('all');
+  const [hasAttachments, setHasAttachments] = useState<'all' | 'with' | 'without'>('all');
+  const [parentChildFilter, setParentChildFilter] = useState<'all' | 'parent' | 'child' | 'standalone'>('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState<{start: string; end: string}>({start: '', end: ''});
+  const [dateFilterType, setDateFilterType] = useState<'execution' | 'valeur'>('execution');
+  const [counterpartySearch, setCounterpartySearch] = useState<string>('');
+  const [ibanSearch, setIbanSearch] = useState<string>('');
+  const [communicationSearch, setCommunicationSearch] = useState<string>('');
+  const [sequenceNumberRange, setSequenceNumberRange] = useState<{start: string; end: string}>({start: '', end: ''});
+  const [linkedEntityType, setLinkedEntityType] = useState<'all' | 'membre' | 'operation' | 'expense' | 'loan' | 'inventory' | 'sale' | 'order'>('all');
+  const [specificAccountCode, setSpecificAccountCode] = useState<string>('');
+  const [commentSearch, setCommentSearch] = useState<string>('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<Map<string, TransactionBancaire[]>>(new Map());
@@ -495,8 +512,8 @@ export function TransactionsPage() {
       return false;
     })();
 
-    // Filtre par catégorie
-    const matchesCategory = selectedCategory === '' || tx.categorie === selectedCategory;
+    // Category filter removed - field doesn't exist
+    const matchesCategory = true;
 
     // Filtre par code comptable
     const matchesAccountCode = accountCodeFilter === 'all' ||
@@ -548,7 +565,93 @@ export function TransactionsPage() {
       }
     }
 
-    return matchesTab && matchesSearch && matchesCategory && matchesAccountCode && matchesReconciliation && matchesAmount;
+    // Enhanced filters
+
+    // Transaction status filter
+    const matchesStatus = transactionStatus === 'all' || tx.statut === transactionStatus;
+
+    // Attachments filter
+    const hasAttachmentsFlag = (tx.urls_justificatifs && tx.urls_justificatifs.length > 0) ||
+                              (tx.documents_justificatifs && tx.documents_justificatifs.length > 0);
+    const matchesAttachments = hasAttachments === 'all' ||
+      (hasAttachments === 'with' && hasAttachmentsFlag) ||
+      (hasAttachments === 'without' && !hasAttachmentsFlag);
+
+    // Parent/Child filter
+    const matchesParentChild = parentChildFilter === 'all' ||
+      (parentChildFilter === 'parent' && tx.is_parent) ||
+      (parentChildFilter === 'child' && tx.parent_transaction_id) ||
+      (parentChildFilter === 'standalone' && !tx.is_parent && !tx.parent_transaction_id);
+
+    // Date range filter
+    let matchesDateRange = true;
+    if (dateRangeFilter.start || dateRangeFilter.end) {
+      const txDate = dateFilterType === 'execution' ? tx.date_execution : tx.date_valeur;
+      const date = txDate?.toDate ? txDate.toDate() : new Date(txDate);
+      if (dateRangeFilter.start) {
+        const startDate = new Date(dateRangeFilter.start);
+        if (date < startDate) matchesDateRange = false;
+      }
+      if (dateRangeFilter.end && matchesDateRange) {
+        const endDate = new Date(dateRangeFilter.end);
+        if (date > endDate) matchesDateRange = false;
+      }
+    }
+
+    // Counterparty search (separate from main search)
+    const matchesCounterparty = !counterpartySearch ||
+      tx.contrepartie_nom.toLowerCase().includes(counterpartySearch.toLowerCase());
+
+    // IBAN search
+    const matchesIban = !ibanSearch ||
+      (tx.contrepartie_iban && tx.contrepartie_iban.toLowerCase().includes(ibanSearch.toLowerCase()));
+
+    // Communication search (separate from main search)
+    const matchesCommunication = !communicationSearch ||
+      tx.communication.toLowerCase().includes(communicationSearch.toLowerCase());
+
+    // Sequence number range
+    let matchesSequenceRange = true;
+    if (sequenceNumberRange.start || sequenceNumberRange.end) {
+      // Extract just the number part from format like "2025-00950"
+      const seqNumMatch = tx.numero_sequence?.match(/(\d+)$/);
+      const seqNum = seqNumMatch ? parseInt(seqNumMatch[1], 10) : null;
+
+      if (seqNum !== null) {
+        const startNum = sequenceNumberRange.start ? parseInt(sequenceNumberRange.start, 10) : null;
+        const endNum = sequenceNumberRange.end ? parseInt(sequenceNumberRange.end, 10) : null;
+
+        if (startNum !== null && !isNaN(startNum) && seqNum < startNum) matchesSequenceRange = false;
+        if (endNum !== null && !isNaN(endNum) && seqNum > endNum) matchesSequenceRange = false;
+      } else {
+        // If we can't parse the sequence number, don't match
+        matchesSequenceRange = false;
+      }
+    }
+
+    // Linked entity type filter
+    const matchesLinkedEntity = linkedEntityType === 'all' ||
+      (linkedEntityType === 'membre' && tx.membre_lifras_id) ||
+      (linkedEntityType === 'operation' && tx.operation_id) ||
+      (linkedEntityType === 'expense' && tx.expense_claim_id) ||
+      (linkedEntityType === 'loan' && tx.linked_to_loan_id) ||
+      (linkedEntityType === 'inventory' && tx.linked_to_inventory_item_id) ||
+      (linkedEntityType === 'sale' && tx.linked_to_sale_id) ||
+      (linkedEntityType === 'order' && tx.linked_to_order_id);
+
+    // Specific account code search
+    const matchesSpecificCode = !specificAccountCode ||
+      (tx.code_comptable && tx.code_comptable.includes(specificAccountCode));
+
+    // Comment search
+    const matchesComment = !commentSearch ||
+      (tx.commentaire && tx.commentaire.toLowerCase().includes(commentSearch.toLowerCase()));
+
+    return matchesTab && matchesSearch && matchesCategory && matchesAccountCode &&
+           matchesReconciliation && matchesAmount && matchesStatus && matchesAttachments &&
+           matchesParentChild && matchesDateRange && matchesCounterparty && matchesIban &&
+           matchesCommunication && matchesSequenceRange && matchesLinkedEntity &&
+           matchesSpecificCode && matchesComment;
   });
 
   // Keyboard navigatie voor detail view (pijltjestoetsen ← →)
@@ -1531,109 +1634,187 @@ export function TransactionsPage() {
         </div>
       </div>
 
-      {/* Tabs de navigation */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border mb-6">
-        <div className="border-b border-gray-200 dark:border-dark-border">
-          <nav className="flex -mb-px">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={cn(
-                "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
-                activeTab === 'all'
-                  ? "border-calypso-blue text-calypso-blue"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              )}
-            >
-              Toutes ({transactions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('income')}
-              className={cn(
-                "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                activeTab === 'income'
-                  ? "border-green-600 text-green-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              )}
-            >
-              <TrendingUp className="h-4 w-4" />
-              Revenus ({transactions.filter(t => t.montant > 0).length})
-            </button>
-            <button
-              onClick={() => setActiveTab('expense')}
-              className={cn(
-                "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                activeTab === 'expense'
-                  ? "border-red-600 text-red-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              )}
-            >
-              <TrendingDown className="h-4 w-4" />
-              Dépenses ({transactions.filter(t => t.montant < 0).length})
-            </button>
-          </nav>
-        </div>
-        
-        {/* Barre d'outils */}
-        <div className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Recherche */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Rechercher..."
-                  className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white dark:bg-dark-bg-secondary"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+      {/* Single Accordion with Tabbed Filters */}
+        <FilterAccordionWithTabs
+          persistKey="transactions-filters"
+          recordsFound={filteredTransactions.length}
+          totalRecords={transactions.length}
+          searchBar={
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+              <input
+                type="text"
+                placeholder="Recherche rapide (contrepartie, communication, numéro, montant, date)..."
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-calypso-blue focus:border-calypso-blue bg-white dark:bg-dark-bg"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+          }
+          onReset={() => {
+            // Reset all filters
+            setSearchTerm('');
+            setActiveTab('all');
+            setReconciliationFilter('all');
+            setAccountCodeFilter('all');
+            setAmountFilterType('all');
+            setAmountValue1('');
+            setAmountValue2('');
+            setTransactionStatus('all');
+            setHasAttachments('all');
+            setParentChildFilter('all');
+            setDateRangeFilter({ start: '', end: '' });
+            setDateFilterType('execution');
+            setCounterpartySearch('');
+            setIbanSearch('');
+            setCommunicationSearch('');
+            setSequenceNumberRange({ start: '', end: '' });
+            setLinkedEntityType('all');
+            setSpecificAccountCode('');
+            setCommentSearch('');
+            setSortConfig({ key: null, direction: 'asc' });
+            toast.success('Tous les filtres ont été réinitialisés', { duration: 1500 });
+          }}
+          tabs={[
+            {
+              id: 'general',
+              title: 'Général',
+              activeFilters: (activeTab !== 'all' ? 1 : 0) +
+                            (reconciliationFilter !== 'all' ? 1 : 0) +
+                            (transactionStatus !== 'all' ? 1 : 0) +
+                            (hasAttachments !== 'all' ? 1 : 0) +
+                            (parentChildFilter !== 'all' ? 1 : 0),
+              content: (
+                <div className="flex gap-2 flex-wrap">
+                  {/* All filters on one line */}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setActiveTab('all')}
+                      className={cn(
+                        "px-2.5 py-1.5 text-sm rounded-lg transition-colors",
+                        activeTab === 'all'
+                          ? "bg-calypso-blue text-white"
+                          : "border border-gray-300 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
+                      )}
+                    >
+                      Tout ({transactions.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('income')}
+                      className={cn(
+                        "px-2.5 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1",
+                        activeTab === 'income'
+                          ? "bg-green-600 text-white"
+                          : "border border-gray-300 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
+                      )}
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      Revenus ({transactions.filter(t => t.montant > 0).length})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('expense')}
+                      className={cn(
+                        "px-2.5 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1",
+                        activeTab === 'expense'
+                          ? "bg-red-600 text-white"
+                          : "border border-gray-300 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
+                      )}
+                    >
+                      <TrendingDown className="h-4 w-4" />
+                      Dépenses ({transactions.filter(t => t.montant < 0).length})
+                    </button>
+                  </div>
 
-            {/* Filtres */}
-            <div className="flex flex-wrap gap-2 items-center">
-              {/* Filtre réconciliation */}
-              <select
-                className="px-3 py-1.5 text-xs border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary h-[30px]"
-                value={reconciliationFilter}
-                onChange={(e) => setReconciliationFilter(e.target.value as any)}
-              >
-                <option value="all">Tous</option>
-                <option value="reconciled">✓ Réconciliés</option>
-                <option value="unreconciled">⚠ Non vérifiés</option>
-                <option value="not_found">✗ Pas trouvé</option>
-              </select>
-
-              <select
-                className="px-3 py-1.5 text-xs border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary h-[30px]"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="">Catégorie</option>
-                <option value="cotisation">Cotisation</option>
-                <option value="piscine">Piscine</option>
-                <option value="evenement">Événement</option>
-                <option value="remboursement">Remboursement</option>
-                <option value="autre">Autre</option>
-              </select>
-
-              {/* Filtre code comptable */}
-              <select
-                className="px-3 py-1.5 text-xs border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary h-[30px]"
-                value={accountCodeFilter}
-                onChange={(e) => setAccountCodeFilter(e.target.value as 'all' | 'with' | 'without')}
-              >
-                <option value="all">Code comptable</option>
-                <option value="with">Avec code</option>
-                <option value="without">Sans code</option>
-              </select>
-
-              {/* Filtre montant */}
-              <div className="relative">
-                <div className="flex items-center gap-1.5 border border-gray-300 dark:border-dark-border rounded-lg px-2 py-1.5 bg-white dark:bg-dark-bg-secondary h-[30px]">
-                  <Filter className="h-3 w-3 text-gray-400 dark:text-dark-text-muted" />
                   <select
-                    className="text-xs border-none focus:ring-0 focus:outline-none bg-transparent pr-1 text-gray-600 dark:text-dark-text-secondary"
+                    className="px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={reconciliationFilter}
+                    onChange={(e) => setReconciliationFilter(e.target.value as any)}
+                  >
+                    <option value="all">Réconciliation: Tous</option>
+                    <option value="reconciled">✓ Réconciliés</option>
+                    <option value="unreconciled">⚠ Non vérifiés</option>
+                    <option value="not_found">✗ Pas trouvé</option>
+                  </select>
+
+                  <select
+                    className="px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={transactionStatus}
+                    onChange={(e) => setTransactionStatus(e.target.value as any)}
+                  >
+                    <option value="all">Statut: Tous</option>
+                    <option value="accepte">Accepté</option>
+                    <option value="refuse">Refusé</option>
+                    <option value="en_attente">En attente</option>
+                  </select>
+
+                  <select
+                    className="px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={hasAttachments}
+                    onChange={(e) => setHasAttachments(e.target.value as any)}
+                  >
+                    <option value="all">Justificatifs: Tous</option>
+                    <option value="with">Avec</option>
+                    <option value="without">Sans</option>
+                  </select>
+
+                  <select
+                    className="px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={parentChildFilter}
+                    onChange={(e) => setParentChildFilter(e.target.value as any)}
+                  >
+                    <option value="all">Structure: Toutes</option>
+                    <option value="parent">Parent</option>
+                    <option value="child">Enfant</option>
+                    <option value="standalone">Simple</option>
+                  </select>
+                </div>
+              )
+            },
+            {
+              id: 'classification',
+              title: 'Classification',
+              activeFilters: (accountCodeFilter !== 'all' ? 1 : 0) +
+                            (specificAccountCode ? 1 : 0),
+              content: (
+                <div className="flex gap-1.5 flex-wrap">
+                  <select
+                    className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={accountCodeFilter}
+                    onChange={(e) => setAccountCodeFilter(e.target.value as any)}
+                  >
+                    <option value="all">Code: Tous</option>
+                    <option value="with">Avec code</option>
+                    <option value="without">Sans code</option>
+                  </select>
+
+                  <ComboBox
+                    options={calypsoAccountCodes
+                      .sort((a, b) => a.code.localeCompare(b.code))
+                      .map(code => ({
+                        value: code.code,
+                        label: code.label,
+                        type: code.type
+                      }))}
+                    value={specificAccountCode}
+                    onChange={setSpecificAccountCode}
+                    placeholder="Code spéc. (730-00-712)"
+                    className="w-52"
+                    allowFreeText={true}
+                    filterOptions={true}
+                  />
+                </div>
+              )
+            },
+            {
+              id: 'financial',
+              title: 'Financier',
+              activeFilters: (amountFilterType !== 'all' ? 1 : 0) +
+                            (dateRangeFilter.start || dateRangeFilter.end ? 1 : 0),
+              content: (
+                <div className="flex gap-1.5 flex-wrap items-center">
+                  {/* Amount and date filters on same line */}
+                  <select
+                    className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
                     value={amountFilterType}
                     onChange={(e) => {
                       setAmountFilterType(e.target.value as any);
@@ -1643,7 +1824,7 @@ export function TransactionsPage() {
                       }
                     }}
                   >
-                    <option value="all">Montant</option>
+                    <option value="all">Montant: Tous</option>
                     <option value="equal">=</option>
                     <option value="greater">≥</option>
                     <option value="less">≤</option>
@@ -1656,18 +1837,18 @@ export function TransactionsPage() {
                         type="number"
                         step="0.01"
                         placeholder="€"
-                        className="w-20 text-xs border border-gray-300 dark:border-dark-border rounded px-1.5 py-0.5 focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                        className="w-24 px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
                         value={amountValue1}
                         onChange={(e) => setAmountValue1(e.target.value)}
                       />
                       {amountFilterType === 'between' && (
                         <>
-                          <span className="text-gray-400 dark:text-dark-text-muted text-xs">-</span>
+                          <span className="text-gray-400 text-sm">-</span>
                           <input
                             type="number"
                             step="0.01"
                             placeholder="€"
-                            className="w-20 text-xs border border-gray-300 dark:border-dark-border rounded px-1.5 py-0.5 focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                            className="w-24 px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
                             value={amountValue2}
                             onChange={(e) => setAmountValue2(e.target.value)}
                           />
@@ -1676,72 +1857,122 @@ export function TransactionsPage() {
                     </>
                   )}
 
-                  {/* Bouton d'aide */}
-                  <button
-                    type="button"
-                    onMouseEnter={() => setShowAmountFilterHelp(true)}
-                    onMouseLeave={() => setShowAmountFilterHelp(false)}
-                    onClick={() => setShowAmountFilterHelp(!showAmountFilterHelp)}
-                    className="p-0.5 text-gray-400 dark:text-dark-text-muted hover:text-gray-600 transition-colors"
-                  >
-                    <HelpCircle className="h-3 w-3" />
-                  </button>
-                </div>
+                  <div className="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
 
-                {/* Tooltip d'aide */}
-                {showAmountFilterHelp && (
-                  <div className="absolute z-10 top-full mt-2 right-0 w-80 bg-white dark:bg-dark-bg-secondary border border-gray-300 dark:border-dark-border rounded-lg shadow-lg p-4">
-                    <div className="flex items-start gap-2 mb-3">
-                      <HelpCircle className="h-5 w-5 text-calypso-blue flex-shrink-0 mt-0.5" />
-                      <h4 className="font-semibold text-gray-900 dark:text-dark-text-primary">Filtres de montant</h4>
+                  <select
+                    className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={dateFilterType}
+                    onChange={(e) => setDateFilterType(e.target.value as any)}
+                  >
+                    <option value="execution">Date exec.</option>
+                    <option value="valeur">Date val.</option>
+                  </select>
+                  <input
+                    type="date"
+                    className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={dateRangeFilter.start}
+                    onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
+                  />
+                  <span className="text-sm text-gray-500">-</span>
+                  <input
+                    type="date"
+                    className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                    value={dateRangeFilter.end}
+                    onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
+                  />
+                </div>
+              )
+            },
+            {
+              id: 'entities',
+              title: 'Entités',
+                activeFilters: (counterpartySearch ? 1 : 0) +
+                              (ibanSearch ? 1 : 0) +
+                              (communicationSearch ? 1 : 0) +
+                              (linkedEntityType !== 'all' ? 1 : 0),
+                content: (
+                  <div className="flex gap-1.5 flex-wrap">
+                    <input
+                      type="text"
+                      placeholder="Contrepartie"
+                      className="w-28 px-1.5 py-1 text-[10px] border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                      value={counterpartySearch}
+                      onChange={(e) => setCounterpartySearch(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="IBAN"
+                      className="w-28 px-1.5 py-1 text-[10px] border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                      value={ibanSearch}
+                      onChange={(e) => setIbanSearch(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Communication"
+                      className="w-32 px-1.5 py-1 text-[10px] border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                      value={communicationSearch}
+                      onChange={(e) => setCommunicationSearch(e.target.value)}
+                    />
+                    <select
+                      className="w-32 px-1.5 py-1 text-[10px] border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg cursor-pointer relative z-10"
+                      value={linkedEntityType}
+                      onChange={(e) => {
+                        console.log('Changing linkedEntityType to:', e.target.value);
+                        setLinkedEntityType(e.target.value as any);
+                      }}
+                    >
+                      <option value="all">Liaison: Toutes</option>
+                      <option value="membre">Membre</option>
+                      <option value="operation">Opération</option>
+                      <option value="expense">Dépense</option>
+                      <option value="loan">Prêt</option>
+                      <option value="inventory">Inventaire</option>
+                      <option value="sale">Vente</option>
+                      <option value="order">Commande</option>
+                    </select>
+                  </div>
+                )
+              },
+            {
+              id: 'advanced',
+              title: 'Avancé',
+                activeFilters: (sequenceNumberRange.start || sequenceNumberRange.end ? 1 : 0) +
+                              (commentSearch ? 1 : 0),
+                content: (
+                  <div className="flex gap-1.5 flex-wrap items-center">
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        placeholder="N° trans. début"
+                        className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                        value={sequenceNumberRange.start}
+                        onChange={(e) => setSequenceNumberRange({ ...sequenceNumberRange, start: e.target.value })}
+                      />
+                      <span className="mx-1 text-sm text-gray-500">-</span>
+                      <input
+                        type="text"
+                        placeholder="N° trans. fin"
+                        className="w-auto px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                        value={sequenceNumberRange.end}
+                        onChange={(e) => setSequenceNumberRange({ ...sequenceNumberRange, end: e.target.value })}
+                      />
+                      <Tooltip text="Filtrer par plage de numéros de transaction (comme affiché dans la colonne N° TRANS.). Exemple: 950 à 960 affichera uniquement les transactions numérotées de 2025-00950 à 2025-00960." />
                     </div>
-                    <div className="space-y-2 text-sm text-gray-700 dark:text-dark-text-primary">
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium text-gray-900 dark:text-dark-text-primary w-12">=</span>
-                        <span>Montant exactement égal à la valeur saisie</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium text-gray-900 dark:text-dark-text-primary w-12">≥</span>
-                        <span>Montant supérieur ou égal à la valeur</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium text-gray-900 dark:text-dark-text-primary w-12">≤</span>
-                        <span>Montant inférieur ou égal à la valeur</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium text-gray-900 dark:text-dark-text-primary w-12">Entre</span>
-                        <span>Montant compris entre deux valeurs (utilisez ... pour séparer)</span>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border text-xs text-gray-500 dark:text-dark-text-muted">
-                        💡 <strong>Astuce :</strong> Les filtres utilisent la valeur absolue des montants (sans tenir compte du signe +/-)
-                      </div>
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        placeholder="Recherche commentaires..."
+                        className="w-44 px-1.5 py-1 text-sm border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-calypso-blue bg-white dark:bg-dark-bg"
+                        value={commentSearch}
+                        onChange={(e) => setCommentSearch(e.target.value)}
+                      />
+                      <Tooltip text="Rechercher dans les commentaires et notes des transactions. Tapez un mot-clé pour trouver toutes les transactions contenant ce texte dans leurs commentaires." />
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Bouton pour réinitialiser tous les filtres */}
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setReconciliationFilter('all');
-                  setSelectedCategory('');
-                  setAccountCodeFilter('all');
-                  setAmountFilterType('all');
-                  setAmountValue1('');
-                  setAmountValue2('');
-                  setSortConfig({ key: null, direction: 'asc' });
-                  toast.success('Filtres et tri réinitialisés', { duration: 1500 });
-                }}
-                className="flex items-center justify-center h-[30px] w-[30px] border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
-                title="Réinitialiser tous les filtres et le tri"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+                )
+              }
+            ]}
+        />
 
 
       {/* Table des transactions */}
@@ -1761,7 +1992,7 @@ export function TransactionsPage() {
             <thead className="bg-gray-50 dark:bg-dark-bg-tertiary border-b border-gray-200 dark:border-dark-border">
               <tr>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-32 cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary select-none"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-36 cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary select-none"
                   onClick={() => handleSort('numero_sequence')}
                 >
                   <div className="flex items-center gap-1">
@@ -1774,7 +2005,7 @@ export function TransactionsPage() {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-32 cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary select-none"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-36 cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary select-none"
                   onClick={() => handleSort('date_execution')}
                 >
                   <div className="flex items-center gap-1">
@@ -1813,7 +2044,7 @@ export function TransactionsPage() {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-32 cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary select-none"
+                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-36 cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary select-none"
                   onClick={() => handleSort('montant')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -1825,7 +2056,7 @@ export function TransactionsPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-24">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider w-auto">
                   Actions
                 </th>
               </tr>
