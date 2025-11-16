@@ -1,0 +1,267 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========== Modular Architecture Security Rules ==========
+    // These rules implement module-based permissions for the new architecture
+    // To integrate: merge these rules into firestore.rules, replacing legacy permission checks
+
+    // ========== Helper Functions ==========
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getCurrentUser() {
+      return request.auth.uid;
+    }
+
+    function getClubMember(clubId) {
+      return get(/databases/$(database)/documents/clubs/$(clubId)/members/$(getCurrentUser()));
+    }
+
+    function getUserRole(clubId) {
+      let member = getClubMember(clubId);
+      return member.data.roleId;
+    }
+
+    function getRole(clubId, roleId) {
+      return get(/databases/$(database)/documents/clubs/$(clubId)/roles/$(roleId));
+    }
+
+    function hasModulePermission(clubId, moduleId, permissionId) {
+      let roleId = getUserRole(clubId);
+      let role = getRole(clubId, roleId);
+      let modulePerms = role.data.modulePermissions[moduleId];
+      return modulePerms != null && permissionId in modulePerms;
+    }
+
+    function isModuleActive(clubId, moduleId) {
+      let module = get(/databases/$(database)/documents/clubs/$(clubId)/modules/$(moduleId));
+      return module.data.isActive == true;
+    }
+
+    function canAccessModule(clubId, moduleId) {
+      return isModuleActive(clubId, moduleId);
+    }
+
+    // ========== Module Definitions (Global) ==========
+
+    match /module_definitions/{moduleId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only through admin SDK
+    }
+
+    // ========== Club-specific Rules ==========
+
+    match /clubs/{clubId} {
+
+      // Module Instances
+      match /modules/{moduleId} {
+        allow read: if isAuthenticated() &&
+                       hasModulePermission(clubId, 'admin', 'view_modules');
+
+        allow create: if hasModulePermission(clubId, 'admin', 'install_modules');
+
+        allow update: if hasModulePermission(clubId, moduleId, 'configure');
+
+        allow delete: if hasModulePermission(clubId, 'admin', 'uninstall_modules');
+      }
+
+      // Roles
+      match /roles/{roleId} {
+        allow read: if isAuthenticated();
+
+        allow write: if hasModulePermission(clubId, 'admin', 'manage_roles');
+      }
+
+      // Members
+      match /members/{memberId} {
+        allow read: if isAuthenticated() &&
+                      (memberId == getCurrentUser() ||
+                       hasModulePermission(clubId, 'users', 'view'));
+
+        allow update: if memberId == getCurrentUser() &&
+                        request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['profile', 'preferences']) ||
+                        hasModulePermission(clubId, 'users', 'update');
+
+        allow create: if hasModulePermission(clubId, 'users', 'create');
+
+        allow delete: if hasModulePermission(clubId, 'users', 'delete');
+      }
+
+      // Module Data Collections (Generic fallback)
+      match /module_data/{moduleId}/{document=**} {
+        allow read: if canAccessModule(clubId, moduleId) &&
+                      hasModulePermission(clubId, moduleId, 'view');
+
+        allow create: if canAccessModule(clubId, moduleId) &&
+                        hasModulePermission(clubId, moduleId, 'create');
+
+        allow update: if canAccessModule(clubId, moduleId) &&
+                        hasModulePermission(clubId, moduleId, 'update');
+
+        allow delete: if canAccessModule(clubId, moduleId) &&
+                        hasModulePermission(clubId, moduleId, 'delete');
+      }
+
+      // ========== Specific Module Rules ==========
+
+      // Transactions Module
+      match /module_data/transactions/items/{transactionId} {
+        allow read: if canAccessModule(clubId, 'transactions') &&
+                      hasModulePermission(clubId, 'transactions', 'view');
+
+        allow create: if canAccessModule(clubId, 'transactions') &&
+                        hasModulePermission(clubId, 'transactions', 'create');
+
+        allow update: if canAccessModule(clubId, 'transactions') &&
+                        (hasModulePermission(clubId, 'transactions', 'update') ||
+                         (hasModulePermission(clubId, 'transactions', 'categorize') &&
+                          request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['category', 'subcategory'])));
+
+        allow delete: if canAccessModule(clubId, 'transactions') &&
+                        hasModulePermission(clubId, 'transactions', 'delete');
+      }
+
+      // Expenses Module
+      match /module_data/expenses/requests/{requestId} {
+        allow read: if canAccessModule(clubId, 'expenses') &&
+                      ((resource.data.requesterId == getCurrentUser() &&
+                       hasModulePermission(clubId, 'expenses', 'view_own')) ||
+                      hasModulePermission(clubId, 'expenses', 'view_all'));
+
+        allow create: if canAccessModule(clubId, 'expenses') &&
+                        hasModulePermission(clubId, 'expenses', 'create') &&
+                        request.resource.data.requesterId == getCurrentUser();
+
+        allow update: if canAccessModule(clubId, 'expenses') &&
+                        ((resource.data.requesterId == getCurrentUser() &&
+                          resource.data.status == 'draft' &&
+                          hasModulePermission(clubId, 'expenses', 'update_own')) ||
+                         hasModulePermission(clubId, 'expenses', 'update_all') ||
+                         (hasModulePermission(clubId, 'expenses', 'approve') &&
+                          request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['status', 'approvedBy', 'approvedAt', 'comments'])));
+
+        allow delete: if canAccessModule(clubId, 'expenses') &&
+                        ((resource.data.requesterId == getCurrentUser() &&
+                          resource.data.status == 'draft' &&
+                          hasModulePermission(clubId, 'expenses', 'delete_own')) ||
+                         hasModulePermission(clubId, 'expenses', 'delete_all'));
+      }
+
+      // Events Module
+      match /module_data/events/items/{eventId} {
+        allow read: if canAccessModule(clubId, 'events') &&
+                      hasModulePermission(clubId, 'events', 'view');
+
+        allow create: if canAccessModule(clubId, 'events') &&
+                        hasModulePermission(clubId, 'events', 'create');
+
+        allow update: if canAccessModule(clubId, 'events') &&
+                        (hasModulePermission(clubId, 'events', 'update_all') ||
+                         (hasModulePermission(clubId, 'events', 'update_own') &&
+                          resource.data.organizerId == getCurrentUser()));
+
+        allow delete: if canAccessModule(clubId, 'events') &&
+                        hasModulePermission(clubId, 'events', 'delete');
+      }
+
+      // Event Registrations
+      match /module_data/events/registrations/{registrationId} {
+        allow read: if canAccessModule(clubId, 'events') &&
+                      hasModulePermission(clubId, 'events', 'view');
+
+        allow create: if canAccessModule(clubId, 'events') &&
+                        hasModulePermission(clubId, 'events', 'register') &&
+                        request.resource.data.userId == getCurrentUser();
+
+        allow update: if canAccessModule(clubId, 'events') &&
+                        hasModulePermission(clubId, 'events', 'manage_participants');
+
+        allow delete: if canAccessModule(clubId, 'events') &&
+                        ((resource.data.userId == getCurrentUser() &&
+                          hasModulePermission(clubId, 'events', 'cancel_registration')) ||
+                         hasModulePermission(clubId, 'events', 'manage_participants'));
+      }
+
+      // Inventory Module
+      match /module_data/inventory/items/{itemId} {
+        allow read: if canAccessModule(clubId, 'inventory') &&
+                      hasModulePermission(clubId, 'inventory', 'view');
+
+        allow create: if canAccessModule(clubId, 'inventory') &&
+                        hasModulePermission(clubId, 'inventory', 'add_items');
+
+        allow update: if canAccessModule(clubId, 'inventory') &&
+                        (hasModulePermission(clubId, 'inventory', 'edit_items') ||
+                         hasModulePermission(clubId, 'inventory', 'move_items'));
+
+        allow delete: if canAccessModule(clubId, 'inventory') &&
+                        hasModulePermission(clubId, 'inventory', 'delete_items');
+      }
+
+      // Inventory Loans
+      match /module_data/inventory/loans/{loanId} {
+        allow read: if canAccessModule(clubId, 'inventory') &&
+                      (hasModulePermission(clubId, 'inventory', 'view') ||
+                       (resource.data.borrowerId == getCurrentUser()));
+
+        allow create: if canAccessModule(clubId, 'inventory') &&
+                        hasModulePermission(clubId, 'inventory', 'create_loan');
+
+        allow update: if canAccessModule(clubId, 'inventory') &&
+                        (hasModulePermission(clubId, 'inventory', 'return_item') ||
+                         (hasModulePermission(clubId, 'inventory', 'approve_loans') &&
+                          request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['status', 'approvedBy', 'approvedAt'])));
+
+        allow delete: if false; // Loans should never be deleted, only marked as returned
+      }
+
+      // Excursions Module
+      match /module_data/excursions/items/{excursionId} {
+        allow read: if canAccessModule(clubId, 'excursions') &&
+                      hasModulePermission(clubId, 'excursions', 'view');
+
+        allow create: if canAccessModule(clubId, 'excursions') &&
+                        hasModulePermission(clubId, 'excursions', 'create');
+
+        allow update: if canAccessModule(clubId, 'excursions') &&
+                        hasModulePermission(clubId, 'excursions', 'manage_bookings');
+
+        allow delete: if canAccessModule(clubId, 'excursions') &&
+                        hasModulePermission(clubId, 'excursions', 'configure');
+      }
+
+      // Excursion Bookings
+      match /module_data/excursions/bookings/{bookingId} {
+        allow read: if canAccessModule(clubId, 'excursions') &&
+                      (hasModulePermission(clubId, 'excursions', 'view') ||
+                       resource.data.travelerId == getCurrentUser());
+
+        allow create: if canAccessModule(clubId, 'excursions') &&
+                        hasModulePermission(clubId, 'excursions', 'book') &&
+                        request.resource.data.travelerId == getCurrentUser();
+
+        allow update: if canAccessModule(clubId, 'excursions') &&
+                        (hasModulePermission(clubId, 'excursions', 'manage_bookings') ||
+                         hasModulePermission(clubId, 'excursions', 'manage_payments'));
+
+        allow delete: if canAccessModule(clubId, 'excursions') &&
+                        ((resource.data.travelerId == getCurrentUser() &&
+                          hasModulePermission(clubId, 'excursions', 'cancel_own')) ||
+                         hasModulePermission(clubId, 'excursions', 'manage_bookings'));
+      }
+
+      // Backups collection (for migration)
+      match /backups/{backupId}/{document=**} {
+        allow read: if hasModulePermission(clubId, 'admin', 'view_backups');
+        allow write: if false; // Only through admin SDK or migration scripts
+      }
+    }
+  }
+}
