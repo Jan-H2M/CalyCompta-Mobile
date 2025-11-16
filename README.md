@@ -96,6 +96,36 @@ Required environment variables for deployment:
 - `VITE_FIREBASE_APP_ID`
 - `FIREBASE_SERVICE_ACCOUNT_KEY` (for API functions)
 
+## Maintenance & Troubleshooting
+
+### Transaction Reconciliation Scripts
+
+Located in `scripts/`, these tools help maintain data integrity:
+
+- **`complete-reconciliation.mjs`** - Compare CSV vs Firestore balances
+- **`analyze-ventilated-transactions.mjs`** - Check parent/child consistency
+- **`compare-amounts-csv-firestore.mjs`** - Transaction-by-transaction comparison
+- **`fix-all-discrepancies.mjs`** - Automated fix with full backup/rollback
+
+**Important:** Before running any fix script:
+1. Always run in DRY_RUN mode first
+2. Review the backup files created
+3. Keep the rollback script for emergency recovery
+
+See [docs/FIX_TRANSACTIONS_2025-11-16.md](docs/FIX_TRANSACTIONS_2025-11-16.md) for detailed documentation of a past reconciliation.
+
+### Known Issues & Solutions
+
+**Problem: Orphan child transactions**
+- Cause: Parent transaction deleted without cleaning up children
+- Solution: Run `analyze-ventilated-transactions.mjs` to detect, then use fix script
+- Prevention: Always use application's delete function, not manual Firestore deletion
+
+**Problem: Balance discrepancy with bank**
+- Cause: Import errors, duplicate transactions, or ventilation issues
+- Solution: Run `complete-reconciliation.mjs` for full diagnosis
+- Documentation: All fixes are logged in `scripts/fix-log-*.json`
+
 ## Contact
 
 For questions about the application, please contact the Calypso Diving Club administration.
