@@ -11,7 +11,8 @@ import {
   writeBatch,
   serverTimestamp
 } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { db } from '@/lib/firebase';
+import { ALL_MODULES } from '@/config/modules/coreModules';
 import type {
   ModuleDefinition,
   ModuleInstance,
@@ -42,48 +43,75 @@ export class ModuleService {
     this.currentClubId = clubId;
 
     try {
-      // Charger les définitions de modules
+      // Charger les définitions de modules (always from code for now)
       await this.loadModuleDefinitions();
 
-      // Charger les instances de modules pour ce club
+      // Charger les instances de modules pour ce club (will be empty until migration)
       await this.loadModuleInstances(clubId);
 
-      // Charger les rôles modulaires
+      // Charger les rôles modulaires (will be empty until migration)
       await this.loadModularRoles(clubId);
 
-      // Vérifier les mises à jour
-      await this.checkForUpdates();
-
-      console.log(`ModuleService initialized for club ${clubId}`);
+      console.log(`✅ ModuleService initialized for club ${clubId} with ${this.modules.size} modules`);
     } catch (error) {
       console.error('Failed to initialize ModuleService:', error);
-      throw error;
+      // Don't throw - allow UI to work with degraded functionality
+      console.warn('⚠️ ModuleService running in degraded mode');
     }
   }
 
   // ========== Gestion des Modules ==========
 
   async loadModuleDefinitions(): Promise<void> {
-    // Charger depuis la collection globale des modules
-    const modulesRef = collection(db, 'module_definitions');
-    const snapshot = await getDocs(modulesRef);
-
     this.modules.clear();
-    snapshot.forEach((doc) => {
-      const module = { id: doc.id, ...doc.data() } as ModuleDefinition;
-      this.modules.set(module.id, module);
-    });
+
+    try {
+      // Try to load from Firestore first
+      const modulesRef = collection(db, 'module_definitions');
+      const snapshot = await getDocs(modulesRef);
+
+      if (!snapshot.empty) {
+        // Use Firestore modules if they exist
+        snapshot.forEach((doc) => {
+          const module = { id: doc.id, ...doc.data() } as ModuleDefinition;
+          this.modules.set(module.id, module);
+        });
+        console.log(`Loaded ${this.modules.size} modules from Firestore`);
+      } else {
+        // Fallback to code-based modules
+        ALL_MODULES.forEach((module) => {
+          this.modules.set(module.id, module);
+        });
+        console.log(`Loaded ${this.modules.size} modules from code (Firestore empty)`);
+      }
+    } catch (error) {
+      // If Firestore fails, use code-based modules
+      console.warn('Failed to load from Firestore, using code-based modules:', error);
+      ALL_MODULES.forEach((module) => {
+        this.modules.set(module.id, module);
+      });
+    }
   }
 
   async loadModuleInstances(clubId: string): Promise<void> {
-    const instancesRef = collection(db, `clubs/${clubId}/modules`);
-    const snapshot = await getDocs(instancesRef);
-
     this.moduleInstances.clear();
-    snapshot.forEach((doc) => {
-      const instance = { moduleId: doc.id, ...doc.data() } as ModuleInstance;
-      this.moduleInstances.set(instance.moduleId, instance);
-    });
+
+    try {
+      const instancesRef = collection(db, `clubs/${clubId}/modules`);
+      const snapshot = await getDocs(instancesRef);
+
+      snapshot.forEach((doc) => {
+        const instance = { moduleId: doc.id, ...doc.data() } as ModuleInstance;
+        this.moduleInstances.set(instance.moduleId, instance);
+      });
+
+      if (this.moduleInstances.size > 0) {
+        console.log(`Loaded ${this.moduleInstances.size} module instances from Firestore`);
+      }
+    } catch (error) {
+      // Silently fail - modules not installed yet
+      console.log('No module instances found (not migrated yet)');
+    }
   }
 
   async installModule(
@@ -417,14 +445,98 @@ export class ModuleService {
   // ========== Gestion des Rôles Modulaires ==========
 
   async loadModularRoles(clubId: string): Promise<void> {
-    const rolesRef = collection(db, `clubs/${clubId}/roles`);
-    const snapshot = await getDocs(rolesRef);
-
     this.roles.clear();
-    snapshot.forEach((doc) => {
-      const role = { id: doc.id, ...doc.data() } as ModularRole;
-      this.roles.set(role.id, role);
-    });
+
+    try {
+      const rolesRef = collection(db, `clubs/${clubId}/modular_roles`);
+      const snapshot = await getDocs(rolesRef);
+
+      snapshot.forEach((doc) => {
+        const role = { id: doc.id, ...doc.data() } as ModularRole;
+        this.roles.set(role.id, role);
+      });
+
+      if (this.roles.size > 0) {
+        console.log(`Loaded ${this.roles.size} modular roles from Firestore`);
+      } else {
+        // If no modular roles exist, create default ones
+        console.log('No modular roles found, creating defaults...');
+        await this.createDefaultRoles(clubId);
+      }
+    } catch (error) {
+      // Silently fail but create defaults
+      console.log('No modular roles found (not migrated yet), creating defaults...');
+      await this.createDefaultRoles(clubId);
+    }
+  }
+
+  async createDefaultRoles(clubId: string): Promise<void> {
+    // Check if default roles already exist
+    if (this.roles.size > 0) {
+      console.log('Default roles already exist, skipping creation');
+      return;
+    }
+
+    const defaultRoles: Omit<ModularRole, 'id' | 'clubId' | 'createdAt' | 'createdBy'>[] = [
+      {
+        name: 'Membre',
+        description: 'Membre du club avec accès limité',
+        level: 0,
+        color: 'gray',
+        icon: 'User',
+        isSystem: true,
+        isActive: true,
+        modulePermissions: {},
+      },
+      {
+        name: 'Utilisateur',
+        description: 'Utilisateur avec accès aux fonctionnalités de base',
+        level: 1,
+        color: 'blue',
+        icon: 'UserCheck',
+        isSystem: true,
+        isActive: true,
+        modulePermissions: {},
+      },
+      {
+        name: 'Validateur',
+        description: 'Peut valider et gérer les demandes',
+        level: 2,
+        color: 'green',
+        icon: 'CheckCircle',
+        isSystem: true,
+        isActive: true,
+        modulePermissions: {},
+      },
+      {
+        name: 'Administrateur',
+        description: 'Administrateur du club avec tous les accès',
+        level: 3,
+        color: 'purple',
+        icon: 'Shield',
+        isSystem: true,
+        isActive: true,
+        modulePermissions: {},
+      },
+      {
+        name: 'Super Administrateur',
+        description: 'Accès complet à tous les modules et paramètres',
+        level: 4,
+        color: 'red',
+        icon: 'Crown',
+        isSystem: true,
+        isActive: true,
+        modulePermissions: {},
+      },
+    ];
+
+    console.log(`Creating ${defaultRoles.length} default roles...`);
+
+    for (const roleData of defaultRoles) {
+      await this.createRole(clubId, roleData);
+    }
+
+    console.log(`✅ Created ${defaultRoles.length} default modular roles`);
   }
 
   async createRole(
@@ -441,7 +553,7 @@ export class ModuleService {
       createdBy: this.getCurrentUserId(),
     };
 
-    await setDoc(doc(db, `clubs/${clubId}/roles/${roleId}`), {
+    await setDoc(doc(db, `clubs/${clubId}/modular_roles/${roleId}`), {
       ...newRole,
       createdAt: serverTimestamp(),
     });
@@ -471,7 +583,7 @@ export class ModuleService {
       }
     }
 
-    await updateDoc(doc(db, `clubs/${clubId}/roles/${roleId}`), {
+    await updateDoc(doc(db, `clubs/${clubId}/modular_roles/${roleId}`), {
       ...updates,
       updatedAt: serverTimestamp(),
       updatedBy: this.getCurrentUserId(),
@@ -496,8 +608,37 @@ export class ModuleService {
       throw new Error(`Cannot delete role: ${usersWithRole.length} users have this role`);
     }
 
-    await deleteDoc(doc(db, `clubs/${clubId}/roles/${roleId}`));
+    await deleteDoc(doc(db, `clubs/${clubId}/modular_roles/${roleId}`));
     this.roles.delete(roleId);
+  }
+
+  async updateRoleModulePermissions(
+    clubId: string,
+    roleId: string,
+    moduleId: string,
+    permissions: string[]
+  ): Promise<void> {
+    const role = this.roles.get(roleId);
+    if (!role) {
+      throw new Error(`Role ${roleId} not found`);
+    }
+
+    // Update the role's modulePermissions
+    const updatedModulePermissions = {
+      ...role.modulePermissions,
+      [moduleId]: permissions
+    };
+
+    await updateDoc(doc(db, `clubs/${clubId}/modular_roles/${roleId}`), {
+      modulePermissions: updatedModulePermissions,
+      updatedAt: serverTimestamp(),
+      updatedBy: this.getCurrentUserId(),
+    });
+
+    // Update local cache
+    role.modulePermissions = updatedModulePermissions;
+
+    console.log(`✅ Updated permissions for role ${role.name} on module ${moduleId}:`, permissions);
   }
 
   // ========== Méthodes Utilitaires ==========
@@ -538,13 +679,15 @@ export class ModuleService {
     const batch = writeBatch(db);
 
     // Structure de base pour chaque module
-    const dataPath = `clubs/${clubId}/module_data/${moduleId}`;
+    // Path must have even number of segments: clubs/{clubId}/module_data/{moduleId}/items/{docId}
+    const dataPath = `clubs/${clubId}/module_data/${moduleId}/items`;
 
-    // Document de métadonnées
-    batch.set(doc(db, `${dataPath}/metadata`), {
+    // Document de métadonnées (placeholder to create collection)
+    batch.set(doc(db, `${dataPath}/_metadata`), {
       createdAt: serverTimestamp(),
       version: '1.0.0',
       schemaVersion: 1,
+      description: 'Metadata document for module data collection'
     });
 
     await batch.commit();
@@ -709,6 +852,161 @@ export class ModuleService {
 
   private generateId(prefix: string): string {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // ========== Data Management Methods ==========
+
+  async getModuleDataStats(clubId: string, moduleId: string): Promise<any> {
+    try {
+      // Map module IDs to their actual data collections
+      const moduleCollections: Record<string, string[]> = {
+        'transactions': ['transactions_bancaires', 'bank_transactions'],
+        'expenses': ['demandes_remboursement', 'expense_claims'],
+        'events': ['operations', 'operation_participants'],
+        'inventory': ['inventory_items', 'inventory_loans', 'stock_products'],
+        'excursions': ['operations'], // Events with type 'excursion'
+      };
+
+      const collections = moduleCollections[moduleId] || [];
+      let totalDocs = 0;
+      let collectionCount = 0;
+
+      for (const collectionName of collections) {
+        try {
+          const collRef = collection(db, `clubs/${clubId}/${collectionName}`);
+          const snapshot = await getDocs(collRef);
+          if (snapshot.size > 0) {
+            totalDocs += snapshot.size;
+            collectionCount++;
+          }
+        } catch (error) {
+          // Collection doesn't exist or error reading - skip it
+          console.log(`Collection ${collectionName} not found or error:`, error);
+        }
+      }
+
+      return {
+        documentCount: totalDocs,
+        collectionCount: collectionCount,
+        estimatedSize: totalDocs > 0 ? `${(totalDocs * 0.5).toFixed(2)} KB` : '0 KB',
+        lastUpdated: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Error getting module data stats:', error);
+      return {
+        documentCount: 0,
+        collectionCount: 0,
+        estimatedSize: '0 KB',
+        lastUpdated: new Date().toISOString(),
+      };
+    }
+  }
+
+  async exportModuleData(
+    clubId: string,
+    moduleId: string,
+    format: 'json' | 'csv'
+  ): Promise<void> {
+    const dataPath = `clubs/${clubId}/module_data/${moduleId}`;
+
+    try {
+      // Get all items
+      const itemsRef = collection(db, `${dataPath}/items`);
+      const snapshot = await getDocs(itemsRef);
+
+      const data: any[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ id: doc.id, ...doc.data() });
+      });
+
+      if (format === 'json') {
+        // Export as JSON
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${moduleId}_export_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else if (format === 'csv') {
+        // Export as CSV
+        if (data.length === 0) {
+          throw new Error('No data to export');
+        }
+
+        const headers = Object.keys(data[0]);
+        const csvRows = [
+          headers.join(','),
+          ...data.map((row) =>
+            headers
+              .map((header) => {
+                const value = row[header];
+                const escaped = String(value).replace(/"/g, '""');
+                return `"${escaped}"`;
+              })
+              .join(',')
+          ),
+        ];
+
+        const csvStr = csvRows.join('\n');
+        const blob = new Blob([csvStr], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${moduleId}_export_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      console.log(`✅ Exported ${data.length} records as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting module data:', error);
+      throw error;
+    }
+  }
+
+  async clearModuleData(clubId: string, moduleId: string): Promise<void> {
+    const dataPath = `clubs/${clubId}/module_data/${moduleId}`;
+
+    try {
+      // Delete all items in batches (Firestore limit: 500 per batch)
+      const itemsRef = collection(db, `${dataPath}/items`);
+      const snapshot = await getDocs(itemsRef);
+
+      const batches: any[] = [];
+      let currentBatch = writeBatch(db);
+      let operationCount = 0;
+
+      snapshot.forEach((docSnapshot) => {
+        currentBatch.delete(docSnapshot.ref);
+        operationCount++;
+
+        if (operationCount === 500) {
+          batches.push(currentBatch);
+          currentBatch = writeBatch(db);
+          operationCount = 0;
+        }
+      });
+
+      if (operationCount > 0) {
+        batches.push(currentBatch);
+      }
+
+      // Execute all batches
+      for (const batch of batches) {
+        await batch.commit();
+      }
+
+      console.log(`✅ Deleted ${snapshot.size} documents from ${moduleId}`);
+    } catch (error) {
+      console.error('Error clearing module data:', error);
+      throw error;
+    }
   }
 }
 

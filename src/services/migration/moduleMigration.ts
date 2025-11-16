@@ -7,7 +7,7 @@ import {
   getDoc,
   setDoc
 } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { db } from '@/lib/firebase';
 import { CORE_MODULES, OPTIONAL_MODULES } from '@/config/modules/coreModules';
 import type { MigrationPlan, MigrationStatus, MigrationLog } from '@/types/migration.types';
 

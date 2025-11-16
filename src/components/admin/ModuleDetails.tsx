@@ -7,11 +7,13 @@ import {
   Save,
   RefreshCw,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Download
 } from 'lucide-react';
 import { moduleService } from '@/services/core/moduleService';
 import { ModuleSettings } from './ModuleSettings';
 import { ModulePermissions } from './ModulePermissions';
+import { ModuleData } from './ModuleData';
 import type { ModuleDefinition, ModuleInstance } from '@/types/module.types';
 
 interface ModuleDetailsProps {
@@ -35,6 +37,7 @@ export const ModuleDetails: React.FC<ModuleDetailsProps> = ({
   const [permissions, setPermissions] = useState<Record<string, string[]>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     loadModuleDetails();
@@ -101,6 +104,28 @@ export const ModuleDetails: React.FC<ModuleDetailsProps> = ({
     setSettings(instance.settings || {});
     setPermissions(instance.permissions || {});
     setHasChanges(false);
+  };
+
+  const handleInstall = async () => {
+    if (!module) return;
+
+    try {
+      setInstalling(true);
+      await moduleService.installModule(clubId, moduleId);
+
+      if (onNotification) {
+        onNotification(`Module ${module.name} installé avec succès`, 'success');
+      }
+
+      // Reload module details to show installed state
+      await loadModuleDetails();
+    } catch (err: any) {
+      if (onNotification) {
+        onNotification(`Erreur lors de l'installation: ${err.message}`, 'error');
+      }
+    } finally {
+      setInstalling(false);
+    }
   };
 
   if (!module) {
@@ -237,18 +262,17 @@ export const ModuleDetails: React.FC<ModuleDetailsProps> = ({
             {activeTab === 'permissions' && (
               <ModulePermissions
                 module={module}
-                permissions={permissions}
-                onChange={handlePermissionsChange}
+                clubId={clubId}
+                onNotification={onNotification}
               />
             )}
 
             {activeTab === 'data' && (
-              <div className="text-center py-8">
-                <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">
-                  Gestion des données du module
-                </p>
-              </div>
+              <ModuleData
+                clubId={clubId}
+                module={module}
+                onNotification={onNotification}
+              />
             )}
           </div>
 
@@ -291,9 +315,26 @@ export const ModuleDetails: React.FC<ModuleDetailsProps> = ({
           <h3 className="text-lg font-medium text-gray-900">
             Module non installé
           </h3>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 mt-2 mb-6">
             Ce module doit être installé pour accéder à ses paramètres
           </p>
+          <button
+            onClick={handleInstall}
+            disabled={installing}
+            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {installing ? (
+              <>
+                <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                Installation en cours...
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5 mr-2" />
+                Installer le module
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>

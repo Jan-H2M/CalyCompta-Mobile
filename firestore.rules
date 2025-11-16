@@ -100,6 +100,24 @@ service cloud.firestore {
         allow write: if isAdmin(clubId) && hasValidSession(clubId);
       }
 
+      // Modular architecture - module management
+      match /modules/{moduleId} {
+        allow read: if isAuthenticated() && hasValidSession(clubId);
+        allow write: if isAdmin(clubId) && hasValidSession(clubId);
+      }
+
+      // Modular roles
+      match /modular_roles/{roleId} {
+        allow read: if isAuthenticated() && hasValidSession(clubId);
+        allow write: if isAdmin(clubId) && hasValidSession(clubId);
+      }
+
+      // Module data collections
+      match /module_data/{moduleId}/{document=**} {
+        allow read: if isAuthenticated() && hasValidSession(clubId);
+        allow write: if isAdmin(clubId) && hasValidSession(clubId);
+      }
+
       // Communication logs - read-only for authenticated users
       match /communication_logs/{logId} {
         allow read: if isAuthenticated() && hasValidSession(clubId);

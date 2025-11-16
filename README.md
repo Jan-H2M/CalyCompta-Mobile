@@ -59,16 +59,28 @@ calycompta-app/
 
 ## Features
 
-- Member management and user administration
-- Expense tracking and reimbursement requests
-- Banking transaction management
-- Financial reporting and analytics
-- Document storage and management
-- Email communication system
-- Automated expense matching
-- Fiscal year management
+### Core Modules
+- 💰 **Banking Transactions** - Import, categorize, and reconcile bank transactions
+- 📝 **Expense Management** - Reimbursement requests with approval workflow
+- 📅 **Events & Activities** - Dive trips, training, and club events
+- 👥 **Member Management** - User administration and role-based permissions
+
+### Optional Modules (Coming Soon)
+- 📦 **Inventory Management** - Equipment tracking, loans, and maintenance
+- ✈️ **Excursions & Travel** - Trip planning, bookings, and payments
+
+### System Features
+- 🔐 Dynamic role-based permissions per module
+- ⚙️ Modular architecture for easy extensibility
+- 📊 Financial reporting and analytics
+- 📄 Document storage and management
+- ✉️ Email communication system
+- 🤖 AI-powered expense categorization
+- 📆 Fiscal year management
 
 ## Development
+
+### Getting Started
 
 ```bash
 # Start development server
@@ -83,6 +95,17 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+### Migration to Modular Architecture
+
+CalyCompta is currently undergoing a major architectural upgrade to a fully modular system. See the [migration documentation](docs/migration/) for details.
+
+**Quick Links:**
+- 📖 [Start Here - Migration Guide](docs/migration/START_HERE.md)
+- 🏗️ [Architecture Summary](docs/migration/MODULAR_ARCHITECTURE_SUMMARY.md)
+- 📋 [Full TODO List](TODO.md)
+
+**Status:** Planning Complete ✅ | Implementation: Planned for 15-20 days
 
 ## Environment Variables
 

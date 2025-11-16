@@ -18,7 +18,8 @@ import {
   Shield,
   Brain,
   List as ListIcon,
-  Database
+  Database,
+  Boxes
 } from 'lucide-react';
 
 interface SettingsCard {
@@ -53,6 +54,15 @@ export function SettingsDashboard() {
       iconBg: 'bg-green-100 dark:bg-green-900/30',
       iconColor: 'text-green-600 dark:text-green-400',
       route: '/parametres/utilisateurs'
+    },
+    {
+      id: 'modules',
+      title: 'Modules',
+      description: 'Gestion des modules, paramètres et permissions modulaires',
+      icon: <Boxes className="h-8 w-8" />,
+      iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+      iconColor: 'text-indigo-600 dark:text-indigo-400',
+      route: '/parametres/modules'
     },
     {
       id: 'evenements',

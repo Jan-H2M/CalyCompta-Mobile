@@ -12,10 +12,13 @@ import {
   Upload,
   RefreshCw,
   Power,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react';
 import { moduleService } from '@/services/core/moduleService';
 import { ModuleDetails } from './ModuleDetails';
+import { RoleManager } from './RoleManager';
+import { ALL_MODULES } from '@/config/modules/coreModules';
 import type { ModuleDefinition, ModuleInstance } from '@/types/module.types';
 
 interface ModuleManagerProps {
@@ -30,6 +33,7 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ clubId, onNotifica
   const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'permissions' | 'data'>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mainTab, setMainTab] = useState<'modules' | 'roles'>('modules');
 
   useEffect(() => {
     loadModules();
@@ -47,8 +51,11 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ clubId, onNotifica
   const loadModules = async () => {
     try {
       setLoading(true);
-      // Load all module definitions from moduleService
-      const allModules: ModuleDefinition[] = [];
+      // Initialize module service with clubId
+      await moduleService.initialize(clubId);
+
+      // Load all module definitions from config
+      const allModules = ALL_MODULES;
       // Get installed modules for this club
       const installed = moduleService.getInstalledModules();
 
@@ -147,6 +154,34 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ clubId, onNotifica
         <p className="text-gray-600 mt-2">
           Gérez les modules et fonctionnalités de votre application
         </p>
+
+        {/* Main Tabs */}
+        <div className="mt-6 border-b border-gray-200">
+          <nav className="flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setMainTab('modules')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                mainTab === 'modules'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Package className="w-5 h-5 mr-2" />
+              Modules
+            </button>
+            <button
+              onClick={() => setMainTab('roles')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                mainTab === 'roles'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="w-5 h-5 mr-2" />
+              Rôles
+            </button>
+          </nav>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -156,131 +191,140 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ clubId, onNotifica
         </div>
       )}
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* Module List */}
-        <div className="col-span-4">
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-gray-900">Modules Disponibles</h2>
-            </div>
+      {/* Tab Content */}
+      {mainTab === 'modules' ? (
+        <div className="grid grid-cols-12 gap-6">
+          {/* Module List */}
+          <div className="col-span-4">
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 border-b">
+                <h2 className="font-semibold text-gray-900">Modules Disponibles</h2>
+              </div>
 
-            <div className="divide-y">
-              {modules.map((module) => {
-                const status = getModuleStatus(module.id);
-                const isSelected = selectedModule === module.id;
+              <div className="divide-y">
+                {modules.map((module) => {
+                  const status = getModuleStatus(module.id);
+                  const isSelected = selectedModule === module.id;
 
-                return (
-                  <div
-                    key={module.id}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                    }`}
-                    onClick={() => setSelectedModule(module.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <h3 className="font-medium text-gray-900">
-                            {module.name}
-                          </h3>
-                          {module.isCore && (
-                            <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
-                              Core
+                  return (
+                    <div
+                      key={module.id}
+                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                      }`}
+                      onClick={() => setSelectedModule(module.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center">
+                            <h3 className="font-medium text-gray-900">
+                              {module.name}
+                            </h3>
+                            {module.isCore && (
+                              <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
+                                Core
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {module.description}
+                          </p>
+                          <div className="flex items-center mt-2 space-x-2">
+                            <span className={`px-2 py-1 text-xs rounded ${getCategoryColor(module.category)}`}>
+                              {module.category}
                             </span>
-                          )}
+                            <span className="text-xs text-gray-500">
+                              v{module.version}
+                            </span>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {module.description}
-                        </p>
-                        <div className="flex items-center mt-2 space-x-2">
-                          <span className={`px-2 py-1 text-xs rounded ${getCategoryColor(module.category)}`}>
-                            {module.category}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            v{module.version}
-                          </span>
+                        <div className="ml-4">
+                          {getStatusIcon(status)}
                         </div>
                       </div>
-                      <div className="ml-4">
-                        {getStatusIcon(status)}
-                      </div>
-                    </div>
 
-                    {/* Quick Actions */}
-                    {status !== 'not-installed' && (
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleModule(module.id, status === 'inactive');
-                          }}
-                          className={`px-3 py-1 text-xs rounded ${
-                            status === 'active'
-                              ? 'bg-gray-200 hover:bg-gray-300'
-                              : 'bg-blue-500 text-white hover:bg-blue-600'
-                          }`}
-                        >
-                          <Power className="w-3 h-3 inline mr-1" />
-                          {status === 'active' ? 'Désactiver' : 'Activer'}
-                        </button>
-
-                        {!module.isCore && (
+                      {/* Quick Actions */}
+                      {status !== 'not-installed' && (
+                        <div className="mt-3 flex gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleUninstallModule(module.id);
+                              handleToggleModule(module.id, status === 'inactive');
                             }}
-                            className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                            className={`px-3 py-1 text-xs rounded ${
+                              status === 'active'
+                                ? 'bg-gray-200 hover:bg-gray-300'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
                           >
-                            <Trash2 className="w-3 h-3 inline mr-1" />
-                            Désinstaller
+                            <Power className="w-3 h-3 inline mr-1" />
+                            {status === 'active' ? 'Désactiver' : 'Activer'}
                           </button>
-                        )}
-                      </div>
-                    )}
 
-                    {status === 'not-installed' && !module.isCore && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleInstallModule(module.id);
-                        }}
-                        className="mt-3 w-full px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                      >
-                        <Download className="w-3 h-3 inline mr-1" />
-                        Installer
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                          {!module.isCore && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUninstallModule(module.id);
+                              }}
+                              className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                            >
+                              <Trash2 className="w-3 h-3 inline mr-1" />
+                              Désinstaller
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {status === 'not-installed' && !module.isCore && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInstallModule(module.id);
+                          }}
+                          className="mt-3 w-full px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          <Download className="w-3 h-3 inline mr-1" />
+                          Installer
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Module Details */}
-        <div className="col-span-8">
-          {selectedModule ? (
-            <ModuleDetails
-              clubId={clubId}
-              moduleId={selectedModule}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              onNotification={showNotification}
-            />
-          ) : (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">
-                Sélectionnez un module
-              </h3>
-              <p className="text-gray-600 mt-2">
-                Choisissez un module dans la liste pour voir ses détails et paramètres
-              </p>
-            </div>
-          )}
+          {/* Module Details */}
+          <div className="col-span-8">
+            {selectedModule ? (
+              <ModuleDetails
+                clubId={clubId}
+                moduleId={selectedModule}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onNotification={showNotification}
+              />
+            ) : (
+              <div className="bg-white rounded-lg shadow p-12 text-center">
+                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900">
+                  Sélectionnez un module
+                </h3>
+                <p className="text-gray-600 mt-2">
+                  Choisissez un module dans la liste pour voir ses détails et paramètres
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Roles Tab */
+        <RoleManager
+          clubId={clubId}
+          onNotification={showNotification}
+        />
+      )}
     </div>
   );
 };

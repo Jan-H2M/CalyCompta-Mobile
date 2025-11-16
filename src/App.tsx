@@ -43,6 +43,7 @@ import { AIReportGeneration } from '@/components/rapports/AIReportGeneration';
 import { InventairePage } from '@/components/inventaire/InventairePage';
 import { InventaireSettings } from '@/components/settings/InventaireSettings';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { ModuleManagerPage } from '@/components/admin/ModuleManagerPage';
 
 // Contextes
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -113,6 +114,7 @@ function AppWithToaster({ user, loading }: { user: User | null; loading: boolean
               <Route path="parametres/securite" element={<SecuriteSettingsPage />} />
               <Route path="parametres/ia-settings" element={<IASettingsPage />} />
               <Route path="parametres/listes-valeurs" element={<ListesValeursSettingsPage />} />
+              <Route path="parametres/modules" element={<ModuleManagerPage />} />
 
               {/* Legacy Settings Routes (to be deprecated) */}
               <Route path="parametres/old" element={<SettingsPage />} />

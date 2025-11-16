@@ -1,25 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Lock, Unlock, AlertCircle } from 'lucide-react';
+import { Shield, Users, Lock, Unlock, AlertCircle, Save, RefreshCw } from 'lucide-react';
 import { moduleService } from '@/services/core/moduleService';
 import type { ModuleDefinition, ModularRole } from '@/types/module.types';
 
 interface ModulePermissionsProps {
   module: ModuleDefinition;
-  permissions: Record<string, string[]>;
-  onChange: (permissions: Record<string, string[]>) => void;
+  clubId: string;
+  onNotification?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export const ModulePermissions: React.FC<ModulePermissionsProps> = ({
   module,
-  permissions,
-  onChange
+  clubId,
+  onNotification
 }) => {
   const [roles, setRoles] = useState<ModularRole[]>([]);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [rolePermissions, setRolePermissions] = useState<string[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadRoles();
   }, []);
+
+  useEffect(() => {
+    if (selectedRole) {
+      loadRolePermissions(selectedRole);
+    }
+  }, [selectedRole]);
 
   const loadRoles = () => {
     const allRoles = moduleService.getAllRoles();
@@ -29,18 +38,60 @@ export const ModulePermissions: React.FC<ModulePermissionsProps> = ({
     }
   };
 
-  const handlePermissionToggle = (roleId: string, permissionId: string) => {
-    const rolePermissions = permissions[roleId] || [];
+  const loadRolePermissions = (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
+    if (role) {
+      const perms = role.modulePermissions[module.id] || [];
+      setRolePermissions(perms);
+      setHasChanges(false);
+    }
+  };
+
+  const handlePermissionToggle = (permissionId: string) => {
     const hasPermission = rolePermissions.includes(permissionId);
 
     const newPermissions = hasPermission
       ? rolePermissions.filter(p => p !== permissionId)
       : [...rolePermissions, permissionId];
 
-    onChange({
-      ...permissions,
-      [roleId]: newPermissions
-    });
+    setRolePermissions(newPermissions);
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    if (!selectedRole) return;
+
+    try {
+      setSaving(true);
+
+      await moduleService.updateRoleModulePermissions(
+        clubId,
+        selectedRole,
+        module.id,
+        rolePermissions
+      );
+
+      setHasChanges(false);
+
+      if (onNotification) {
+        onNotification('Permissions enregistrées avec succès', 'success');
+      }
+
+      // Reload roles to get fresh data
+      loadRoles();
+    } catch (error: any) {
+      if (onNotification) {
+        onNotification(`Erreur: ${error.message}`, 'error');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (selectedRole) {
+      loadRolePermissions(selectedRole);
+    }
   };
 
   const getRiskColor = (riskLevel: string) => {
@@ -114,7 +165,7 @@ export const ModulePermissions: React.FC<ModulePermissionsProps> = ({
 
               <div className="space-y-3">
                 {perms.map((perm: any) => {
-                  const hasPermission = (permissions[selectedRole] || []).includes(perm.id);
+                  const hasPermission = rolePermissions.includes(perm.id);
 
                   return (
                     <div
@@ -127,7 +178,7 @@ export const ModulePermissions: React.FC<ModulePermissionsProps> = ({
                             <input
                               type="checkbox"
                               checked={hasPermission}
-                              onChange={() => handlePermissionToggle(selectedRole, perm.id)}
+                              onChange={() => handlePermissionToggle(perm.id)}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="ml-3 font-medium text-gray-900">
@@ -185,11 +236,41 @@ export const ModulePermissions: React.FC<ModulePermissionsProps> = ({
                   Résumé des permissions
                 </p>
                 <p className="text-sm text-blue-700 mt-1">
-                  {(permissions[selectedRole] || []).length} permission(s) accordée(s) pour ce rôle
+                  {rolePermissions.length} permission(s) accordée(s) pour ce rôle
                 </p>
               </div>
             </div>
           </div>
+
+          {/* Save/Reset Buttons */}
+          {hasChanges && (
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleReset}
+                disabled={saving}
+                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 flex items-center"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Enregistrer
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
