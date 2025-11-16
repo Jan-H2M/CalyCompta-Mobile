@@ -23,7 +23,7 @@ const db = getFirestore();
 const CLUB_ID = 'calypso';
 
 // CONFIGURATION
-const DRY_RUN = false;  // Mettre à false pour exécuter réellement
+const DRY_RUN = true;  // Mettre à false pour exécuter réellement
 
 async function fixAllDiscrepancies() {
   console.log('🔧 === CORRECTION COMPLÈTE AVEC TRAÇABILITÉ ===\n');
@@ -328,3 +328,5 @@ fixAllDiscrepancies()
     console.error('\n❌ Erreur fatale:', error);
     process.exit(1);
   });
+node scripts/fix-all-discrepancies.mjs
+

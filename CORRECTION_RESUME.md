@@ -11,6 +11,7 @@
 ### 2. Scripts Créés
 
 **Diagnostic:**
+- ✅ `scripts/recalculate-balance.mjs` - **Recalcul du solde (méthode de référence)**
 - ✅ `scripts/complete-reconciliation.mjs` - Analyse complète
 - ✅ `scripts/analyze-ventilated-transactions.mjs` - Vérification parent/enfant
 - ✅ `scripts/compare-amounts-csv-firestore.mjs` - Comparaison détaillée

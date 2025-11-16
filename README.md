@@ -102,17 +102,23 @@ Required environment variables for deployment:
 
 Located in `scripts/`, these tools help maintain data integrity:
 
+- **`recalculate-balance.mjs`** - **Recalculate balance using app logic (reference method)**
 - **`complete-reconciliation.mjs`** - Compare CSV vs Firestore balances
 - **`analyze-ventilated-transactions.mjs`** - Check parent/child consistency
 - **`compare-amounts-csv-firestore.mjs`** - Transaction-by-transaction comparison
 - **`fix-all-discrepancies.mjs`** - Automated fix with full backup/rollback
+
+**Quick Check:** To verify current balance and detect issues:
+```bash
+node scripts/recalculate-balance.mjs
+```
 
 **Important:** Before running any fix script:
 1. Always run in DRY_RUN mode first
 2. Review the backup files created
 3. Keep the rollback script for emergency recovery
 
-See [docs/FIX_TRANSACTIONS_2025-11-16.md](docs/FIX_TRANSACTIONS_2025-11-16.md) for detailed documentation of a past reconciliation.
+See [ETAT_ACTUEL.md](ETAT_ACTUEL.md) for current status or [docs/FIX_TRANSACTIONS_2025-11-16.md](docs/FIX_TRANSACTIONS_2025-11-16.md) for detailed documentation of past reconciliation.
 
 ### Known Issues & Solutions
 

@@ -94,3 +94,4 @@ Thumbs.db
 .vercel
 *.json
 .env*.local
+serviceAccountKey.json

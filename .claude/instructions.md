@@ -83,6 +83,9 @@ Application de gestion financière pour le club de plongée Calypso. Stack: Reac
 
 ### Vérifier l'intégrité des données
 ```bash
+# Recalcul du solde (méthode de référence - identique à l'application)
+node scripts/recalculate-balance.mjs
+
 # Analyse complète
 node scripts/complete-reconciliation.mjs
 

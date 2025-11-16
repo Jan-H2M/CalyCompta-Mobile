@@ -2001,8 +2001,8 @@ export function DemandeDetailView({
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                       <CheckCircle className="h-4 w-4 flex-shrink-0" />
                       <span className="font-medium">1ère approbation:</span>
-                      <span>{demand.approuve_par_nom}</span>
-                      {demand.date_approbation && (
+                      <span>{demand?.approuve_par_nom}</span>
+                      {demand?.date_approbation && (
                         <span className="text-gray-500 dark:text-gray-400 text-sm ml-auto">
                           le {formatDate(demand.date_approbation)}
                         </span>
@@ -2016,12 +2016,12 @@ export function DemandeDetailView({
                       </div>
                     )}
 
-                    {demand.approuve_par_2 && (
+                    {demand?.approuve_par_2 && (
                       <div className="flex items-center gap-2 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                         <CheckCircle className="h-4 w-4 flex-shrink-0" />
                         <span className="font-medium">2ème approbation:</span>
-                        <span>{demand.approuve_par_2_nom}</span>
-                        {demand.date_approbation_2 && (
+                        <span>{demand?.approuve_par_2_nom}</span>
+                        {demand?.date_approbation_2 && (
                           <span className="text-gray-500 dark:text-gray-400 text-sm ml-auto">
                             le {formatDate(demand.date_approbation_2)}
                           </span>
@@ -2031,7 +2031,7 @@ export function DemandeDetailView({
                   </div>
                 )}
 
-                <ApprovalBadge demand={demand} showDetails={true} />
+                {demand && <ApprovalBadge demand={demand} showDetails={true} />}
               </div>
 
               {/* Historique d'approbation */}
@@ -2046,13 +2046,13 @@ export function DemandeDetailView({
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Soumission</p>
                       <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                        {demand.date_soumission ? formatDate(demand.date_soumission, 'dd/MM/yyyy HH:mm') : '-'} par {demand.demandeur_nom}
+                        {demand?.date_soumission ? formatDate(demand.date_soumission, 'dd/MM/yyyy HH:mm') : '-'} par {demand?.demandeur_nom || '-'}
                       </p>
                     </div>
                   </div>
 
                   {/* Première approbation */}
-                  {demand.approuve_par && (
+                  {demand?.approuve_par && (
                     <div className="flex items-start gap-3">
                       <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-full">
                         <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
@@ -2067,7 +2067,7 @@ export function DemandeDetailView({
                   )}
 
                   {/* Deuxième approbation */}
-                  {demand.approuve_par_2 && (
+                  {demand?.approuve_par_2 && (
                     <div className="flex items-start gap-3">
                       <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-full">
                         <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
@@ -2082,7 +2082,7 @@ export function DemandeDetailView({
                   )}
 
                   {/* Refus */}
-                  {demand.statut === 'refuse' && (
+                  {demand?.statut === 'refuse' && (
                     <div className="flex items-start gap-3">
                       <div className="p-1.5 bg-red-100 dark:bg-red-900/30 rounded-full">
                         <XCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
@@ -2100,7 +2100,7 @@ export function DemandeDetailView({
                   )}
 
                   {/* Remboursement */}
-                  {demand.date_remboursement && (
+                  {demand?.date_remboursement && (
                     <div className="flex items-start gap-3">
                       <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                         <Euro className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
@@ -2121,7 +2121,7 @@ export function DemandeDetailView({
                 <h3 className="text-sm font-medium text-gray-500 dark:text-dark-text-muted mb-3">Actions disponibles</h3>
 
                 {/* CAS 1: User is the requester AND demand is pending approval */}
-                {isRequester && (demand.statut === 'soumis' || demand.statut === 'en_attente_validation') && (
+                {isRequester && demand && (demand.statut === 'soumis' || demand.statut === 'en_attente_validation') && (
                   <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
                       <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
@@ -2137,7 +2137,7 @@ export function DemandeDetailView({
                 )}
 
                 {/* CAS 2: User doesn't have permission AND demand is pending approval */}
-                {!hasApprovalPermission && !isRequester && (demand.statut === 'soumis' || demand.statut === 'en_attente_validation') && (
+                {!hasApprovalPermission && !isRequester && demand && (demand.statut === 'soumis' || demand.statut === 'en_attente_validation') && (
                   <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
                       <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
@@ -2169,7 +2169,7 @@ export function DemandeDetailView({
                 )}
 
                 {/* CAS 4: User CAN approve - First approval needed */}
-                {canApprove && demand.statut === 'soumis' && (
+                {canApprove && demand && demand.statut === 'soumis' && (
                   <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
@@ -2215,7 +2215,7 @@ export function DemandeDetailView({
                 )}
 
                 {/* CAS 6: Demand is approved - Ready for payment */}
-                {demand.statut === 'approuve' && (
+                {demand && demand.statut === 'approuve' && (
                   <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
@@ -2247,7 +2247,7 @@ export function DemandeDetailView({
                 )}
 
                 {/* CAS 7: Demand is reimbursed (paid) */}
-                {demand.statut === 'rembourse' && (
+                {demand && demand.statut === 'rembourse' && (
                   <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />

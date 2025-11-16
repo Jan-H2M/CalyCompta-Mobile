@@ -214,22 +214,16 @@ export function TableauBord() {
 
   // ✅ Fonction pour rafraîchir manuellement toutes les données
   const handleRefreshDashboard = async () => {
-    console.log('🔄 Rafraîchissement manuel du dashboard...');
-    await queryClient.invalidateQueries({ queryKey: ['currentFiscalYear', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['previousFiscalYear', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['balanceCurrent', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['balanceSavings', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['fiscalYearStats', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['monthlyBreakdown', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['financialSummary', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['currentMonthStats', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['memberStats', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['pendingActions', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['reconciliationStats', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['accountingCodeStats', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['countStats', clubId] });
-    await queryClient.invalidateQueries({ queryKey: ['yearOverYearData', clubId] });
-    console.log('✅ Dashboard rafraîchi!');
+    try {
+      console.log('🔄 Rafraîchissement manuel du dashboard...');
+
+      // Invalider toutes les queries en une seule fois
+      await queryClient.invalidateQueries();
+
+      console.log('✅ Dashboard rafraîchi!');
+    } catch (error) {
+      console.error('❌ Erreur lors du rafraîchissement:', error);
+    }
   };
 
   // Fonction de debug pour vérifier les calculs
@@ -372,15 +366,27 @@ export function TableauBord() {
           </p>
         </div>
 
-        {/* Bouton Actualiser */}
-        <button
-          onClick={handleRefreshDashboard}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-primary bg-white dark:bg-dark-bg-secondary border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          Actualiser
-        </button>
+        {/* Boutons d'action */}
+        <div className="flex items-center gap-3">
+          {/* Bouton Debug Calculs */}
+          <button
+            onClick={handleDebugCalculations}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-800 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+          >
+            <AlertCircle className="h-4 w-4" />
+            Debug Calculs
+          </button>
+
+          {/* Bouton Actualiser */}
+          <button
+            onClick={handleRefreshDashboard}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-primary bg-white dark:bg-dark-bg-secondary border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            Actualiser
+          </button>
+        </div>
       </div>
 
       {/* Statistiques rapides */}
