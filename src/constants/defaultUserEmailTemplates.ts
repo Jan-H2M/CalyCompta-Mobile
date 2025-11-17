@@ -18,6 +18,7 @@ export const DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE = `
 
   <!-- Header with logo -->
   <div style="background: {{headerGradient}}; color: white; padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <img src="{{appUrl}}/logo-horizontal.jpg" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
     <h1 style="margin: 0; font-size: 28px;">🎉 Bienvenue !</h1>
     <p style="margin: 10px 0 0 0; opacity: 0.95; font-size: 16px;">Votre compte a été activé</p>
   </div>
@@ -50,8 +51,8 @@ export const DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE = `
       </p>
       <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: #78350F;">
         <li style="margin-bottom: 8px;">Connectez-vous avec le mot de passe temporaire ci-dessus</li>
-        <li style="margin-bottom: 8px;">Vous serez invité à créer un <strong>nouveau mot de passe</strong> sécurisé</li>
-        <li style="margin-bottom: 8px;">Choisissez un mot de passe fort (minimum 8 caractères)</li>
+        <li style="margin-bottom: 8px;">Vous <strong>devrez obligatoirement</strong> créer un nouveau mot de passe sécurisé</li>
+        <li style="margin-bottom: 8px;">Choisissez un mot de passe fort et unique (minimum 8 caractères)</li>
         <li>Conservez vos identifiants en lieu sûr</li>
       </ol>
     </div>
@@ -101,6 +102,7 @@ export const DEFAULT_PASSWORD_RESET_TEMPLATE = `
 
   <!-- Header with logo -->
   <div style="background: {{headerGradient}}; color: white; padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <img src="{{appUrl}}/logo-horizontal.jpg" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
     <h1 style="margin: 0; font-size: 28px;">🔑 Réinitialisation de mot de passe</h1>
     <p style="margin: 10px 0 0 0; opacity: 0.95; font-size: 16px;">Votre mot de passe a été réinitialisé</p>
   </div>
