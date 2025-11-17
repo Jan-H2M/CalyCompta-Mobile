@@ -1,6 +1,7 @@
 import { auth, db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getTemplate, renderTemplate } from './emailTemplateService';
+import { FirebaseSettingsService } from './firebaseSettingsService';
 import type { EmailTemplateType } from '@/types/emailTemplates';
 import type { User } from '@/types/user.types';
 import Handlebars from 'handlebars';
@@ -35,7 +36,12 @@ export class GoogleMailService {
         throw new Error('User must be authenticated to send emails');
       }
 
-      const authToken = await user.getIdToken();
+      // Load Gmail configuration from Firestore
+      const gmailConfig = await FirebaseSettingsService.loadGoogleMailConfig(clubId);
+
+      if (!gmailConfig.clientId || !gmailConfig.clientSecret || !gmailConfig.refreshToken) {
+        throw new Error('Gmail configuration is incomplete. Please configure Gmail in Settings > Integrations.');
+      }
 
       // Call Vercel Serverless Function
       const response = await fetch('/api/send-gmail', {
@@ -44,12 +50,15 @@ export class GoogleMailService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          clubId,
+          clientId: gmailConfig.clientId,
+          clientSecret: gmailConfig.clientSecret,
+          refreshToken: gmailConfig.refreshToken,
+          fromEmail: gmailConfig.fromEmail || 'noreply@calypso-diving.be',
+          fromName: gmailConfig.fromName || 'Calypso Diving Club',
           to,
           subject,
           htmlBody,
           textBody: textBody || htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML tags as fallback
-          authToken,
         }),
       });
 

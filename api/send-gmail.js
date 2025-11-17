@@ -1,10 +1,25 @@
 // Vercel API handler for sending Gmail emails
 import { google } from 'googleapis';
 
-// Initialize Gmail API
-async function getGmailClient(authToken) {
-  const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({ access_token: authToken });
+/**
+ * Get Gmail client using OAuth2 refresh token
+ * @param {string} clientId - OAuth2 Client ID
+ * @param {string} clientSecret - OAuth2 Client Secret
+ * @param {string} refreshToken - OAuth2 Refresh Token
+ * @returns {Promise} Gmail API client
+ */
+async function getGmailClient(clientId, clientSecret, refreshToken) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    'https://developers.google.com/oauthplayground' // Redirect URI (not used for refresh)
+  );
+
+  // Set refresh token
+  oauth2Client.setCredentials({
+    refresh_token: refreshToken
+  });
+
   return google.gmail({ version: 'v1', auth: oauth2Client });
 }
 
@@ -15,15 +30,36 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { authToken, clubId, to, subject, htmlBody, textBody } = req.body;
+    const {
+      clientId,
+      clientSecret,
+      refreshToken,
+      fromEmail,
+      fromName,
+      to,
+      subject,
+      htmlBody,
+      textBody
+    } = req.body;
 
-    if (!authToken || !to || !subject || !htmlBody) {
-      console.error('❌ Missing fields:', { authToken: !!authToken, to: !!to, subject: !!subject, htmlBody: !!htmlBody });
+    // Validate required fields
+    if (!clientId || !clientSecret || !refreshToken || !to || !subject || !htmlBody) {
+      console.error('❌ Missing fields:', {
+        clientId: !!clientId,
+        clientSecret: !!clientSecret,
+        refreshToken: !!refreshToken,
+        to: !!to,
+        subject: !!subject,
+        htmlBody: !!htmlBody
+      });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Create email message
+    // Create email message with From header
+    const fromHeader = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+
     const message = [
+      `From: ${fromHeader}`,
       `To: ${to}`,
       'Content-Type: text/html; charset=utf-8',
       'MIME-Version: 1.0',
@@ -40,7 +76,7 @@ export default async function handler(req, res) {
       .replace(/=+$/, '');
 
     // Send email via Gmail API
-    const gmail = await getGmailClient(authToken);
+    const gmail = await getGmailClient(clientId, clientSecret, refreshToken);
     const result = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
