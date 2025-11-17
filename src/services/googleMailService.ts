@@ -3,6 +3,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getTemplate, renderTemplate } from './emailTemplateService';
 import type { EmailTemplateType } from '@/types/emailTemplates';
 import type { User } from '@/types/user.types';
+import Handlebars from 'handlebars';
 
 /**
  * Service pour envoyer des emails via Google Mail API (Gmail)
@@ -212,7 +213,6 @@ export class GoogleMailService {
       }
 
       // 4. Rendre le sujet
-      const Handlebars = require('handlebars');
       const subjectTemplate = Handlebars.compile(template.subject);
       const renderedSubject = subjectTemplate(templateData);
 
