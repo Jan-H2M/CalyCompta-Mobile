@@ -697,6 +697,44 @@ export const PENDING_DEMANDS_SAMPLE_DATA: EmailTemplateSampleData = {
 };
 
 /**
+ * Sample data for preview (account activated)
+ */
+export const ACCOUNT_ACTIVATED_SAMPLE_DATA: EmailTemplateSampleData = {
+  id: 'sample-account-activated',
+  name: 'Exemple activation de compte',
+  description: 'Données de test pour prévisualiser le template',
+  emailType: 'account_activated',
+  data: {
+    recipientName: 'Marie Dubois',
+    firstName: 'Marie',
+    lastName: 'Dubois',
+    email: 'marie.dubois@example.com',
+    temporaryPassword: 'CalyCompta2025-42',
+    clubName: 'Calypso Diving Club',
+    appUrl: 'https://calycompta.vercel.app',
+  },
+};
+
+/**
+ * Sample data for preview (password reset)
+ */
+export const PASSWORD_RESET_SAMPLE_DATA: EmailTemplateSampleData = {
+  id: 'sample-password-reset',
+  name: 'Exemple réinitialisation mot de passe',
+  description: 'Données de test pour prévisualiser le template',
+  emailType: 'password_reset',
+  data: {
+    recipientName: 'Pierre Martin',
+    firstName: 'Pierre',
+    lastName: 'Martin',
+    email: 'pierre.martin@example.com',
+    temporaryPassword: 'CalyCompta2025-78',
+    clubName: 'Calypso Diving Club',
+    appUrl: 'https://calycompta.vercel.app',
+  },
+};
+
+/**
  * Helper: Get variable definitions for a template type
  */
 export function getVariablesForType(emailType: EmailTemplateType): EmailTemplateVariable[] {
@@ -747,6 +785,10 @@ export function getSampleDataForType(emailType: EmailTemplateType): EmailTemplat
       return PENDING_DEMANDS_SAMPLE_DATA;
     case 'accounting_codes':
       return ACCOUNTING_CODES_SAMPLE_DATA;
+    case 'account_activated':
+      return ACCOUNT_ACTIVATED_SAMPLE_DATA;
+    case 'password_reset':
+      return PASSWORD_RESET_SAMPLE_DATA;
     default:
       return null;  // Phase 2: add more types
   }
