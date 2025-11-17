@@ -100,6 +100,13 @@ service cloud.firestore {
         allow write: if isAdmin(clubId) && hasValidSession(clubId);
       }
 
+      // Email history - track sent emails
+      match /email_history/{historyId} {
+        allow read: if isAuthenticated() && hasValidSession(clubId);
+        allow create: if isAuthenticated() && hasValidSession(clubId);
+        allow update, delete: if isAdmin(clubId) && hasValidSession(clubId);
+      }
+
       // Communication logs - read-only for authenticated users
       match /communication_logs/{logId} {
         allow read: if isAuthenticated() && hasValidSession(clubId);

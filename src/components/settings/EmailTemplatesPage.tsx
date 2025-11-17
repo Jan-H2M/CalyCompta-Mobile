@@ -11,15 +11,19 @@ import {
   deleteTemplate,
   duplicateTemplate,
 } from '@/services/emailTemplateService';
+import { initializeUserEmailTemplates } from '@/services/templateInitializationService';
 import type { EmailTemplate } from '@/types/emailTemplates';
-import { Mail, Plus, Edit, Trash2, Copy, Search, Filter, ChevronLeft } from 'lucide-react';
+import { Mail, Plus, Edit, Trash2, Copy, Search, Filter, ChevronLeft, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmailTemplateEditor } from './EmailTemplateEditor';
 
-type EmailTemplateType = 'pending_demands' | 'events' | 'transactions' | 'members' | 'custom';
+type EmailTemplateType = 'pending_demands' | 'accounting_codes' | 'account_activated' | 'password_reset' | 'events' | 'transactions' | 'members' | 'custom';
 
 const EMAIL_TYPE_LABELS: Record<EmailTemplateType, string> = {
   pending_demands: 'Demandes en attente',
+  accounting_codes: 'Codes comptables',
+  account_activated: 'Activation de compte',
+  password_reset: 'Réinitialisation mot de passe',
   events: 'Événements',
   transactions: 'Transactions',
   members: 'Membres',
@@ -36,6 +40,7 @@ export function EmailTemplatesPage() {
   const [selectedType, setSelectedType] = useState<EmailTemplateType | 'all'>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [initializing, setInitializing] = useState(false);
 
   // Load templates
   useEffect(() => {
@@ -124,6 +129,36 @@ export function EmailTemplatesPage() {
     setShowEditor(true);
   }
 
+  async function handleInitializeDefaults() {
+    if (!clubId || !user) return;
+
+    try {
+      setInitializing(true);
+      const result = await initializeUserEmailTemplates(clubId, user.uid);
+
+      if (result.success) {
+        toast.success(
+          `${result.created} template(s) créé(s), ${result.skipped} déjà existant(s)`
+        );
+        loadTemplates();
+      } else {
+        toast.error(
+          `Erreur lors de l'initialisation: ${result.errors.join(', ')}`
+        );
+      }
+    } catch (error: any) {
+      console.error('Error initializing templates:', error);
+      toast.error('Erreur lors de l\'initialisation des templates');
+    } finally {
+      setInitializing(false);
+    }
+  }
+
+  // Check if user management templates exist
+  const hasUserTemplates = templates.some(
+    (t) => t.emailType === 'account_activated' || t.emailType === 'password_reset'
+  );
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-screen">
@@ -169,13 +204,25 @@ export function EmailTemplatesPage() {
               Gérez vos templates d'emails automatiques
             </p>
           </div>
-          <button
-            onClick={handleCreate}
-            className="bg-calypso-blue hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            Nouveau template
-          </button>
+          <div className="flex items-center gap-3">
+            {!hasUserTemplates && (
+              <button
+                onClick={handleInitializeDefaults}
+                disabled={initializing}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Download className="h-5 w-5" />
+                {initializing ? 'Initialisation...' : 'Initialiser templates utilisateurs'}
+              </button>
+            )}
+            <button
+              onClick={handleCreate}
+              className="bg-calypso-blue hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              Nouveau template
+            </button>
+          </div>
         </div>
       </div>
 
