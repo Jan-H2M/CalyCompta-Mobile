@@ -75,11 +75,22 @@ Par défaut, les emails sont envoyés depuis `onboarding@resend.dev`. Pour utili
 
 ## En cas de problème
 
-### L'email n'est pas envoyé
+### L'email n'est pas envoyé - Problème Vercel Protection
 
-1. Vérifiez que `RESEND_API_KEY` est bien configurée
+**PROBLÈME IDENTIFIÉ** : Vercel Deployment Protection bloque l'accès à `/api/send-resend`
+
+**SOLUTION** :
+1. Allez sur https://vercel.com/h2m/calycompta/settings/deployment-protection
+2. Soit **désactivez temporairement** "Deployment Protection"
+3. Soit ajoutez `/api/*` dans les **Path Bypass** pour que les APIs soient accessibles
+4. Redéployez votre application
+
+### L'email n'est pas envoyé - Autres causes
+
+1. Vérifiez que `RESEND_API_KEY` est bien configurée dans Firestore
 2. Regardez les logs Vercel : https://vercel.com/h2m/calycompta/logs
 3. Vérifiez le dashboard Resend : https://resend.com/emails
+4. Ouvrez la console du navigateur (F12 → Console) pour voir les erreurs
 
 ### Erreur "Missing API Key"
 

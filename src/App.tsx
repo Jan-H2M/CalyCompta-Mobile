@@ -171,7 +171,18 @@ function App() {
 
   useEffect(() => {
     // Observer les changements d'authentification
-    const unsubscribe = onAuthChange((user) => {
+    const unsubscribe = onAuthChange(async (user) => {
+      if (user) {
+        // Force token refresh to ensure custom claims are loaded
+        // This prevents the "Missing or insufficient permissions" errors
+        // that occur when the app starts before custom claims are available
+        try {
+          await user.getIdToken(true); // true = force refresh
+          console.log('✅ Token refreshed with custom claims');
+        } catch (error) {
+          console.error('❌ Error refreshing token:', error);
+        }
+      }
       setUser(user);
       setLoading(false);
     });
