@@ -57,6 +57,7 @@ export function UserDetailView({
   const [resetRequireChange, setResetRequireChange] = useState<boolean>(true);
   const [isResetting, setIsResetting] = useState(false);
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   // Update formData when user changes (including lifras_id from Membre type)
   useEffect(() => {
@@ -77,6 +78,35 @@ export function UserDetailView({
       });
     }
   }, [user]);
+
+  // Load user names for metadata display
+  useEffect(() => {
+    const loadUserNames = async () => {
+      if (!user || !clubId) return;
+
+      const userIds = new Set<string>();
+      if (user.metadata?.createdBy) userIds.add(user.metadata.createdBy);
+      if (user.metadata?.activatedBy) userIds.add(user.metadata.activatedBy);
+      if (user.metadata?.suspendedBy) userIds.add(user.metadata.suspendedBy);
+
+      if (userIds.size === 0) return;
+
+      try {
+        const names: Record<string, string> = {};
+        for (const userId of userIds) {
+          const userData = await UserService.getUser(clubId, userId);
+          if (userData) {
+            names[userId] = userData.displayName || userData.email;
+          }
+        }
+        setUserNames(names);
+      } catch (error) {
+        console.error('Error loading user names:', error);
+      }
+    };
+
+    loadUserNames();
+  }, [user, clubId]);
 
   useEffect(() => {
     const loadAuditLogs = async () => {
@@ -810,12 +840,12 @@ export function UserDetailView({
                     <div className="bg-gray-50 dark:bg-dark-bg-tertiary p-4 rounded-lg space-y-2">
                       {user.metadata.createdBy && (
                         <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                          Créé par: <span className="font-medium">{user.metadata.createdBy}</span>
+                          Créé par: <span className="font-medium">{userNames[user.metadata.createdBy] || user.metadata.createdBy}</span>
                         </p>
                       )}
                       {user.metadata.activatedBy && (
                         <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                          Activé par: <span className="font-medium">{user.metadata.activatedBy}</span>
+                          Activé par: <span className="font-medium">{userNames[user.metadata.activatedBy] || user.metadata.activatedBy}</span>
                           {user.metadata.activatedAt && (
                             <span> le {formatDate(user.metadata.activatedAt)}</span>
                           )}
@@ -823,7 +853,7 @@ export function UserDetailView({
                       )}
                       {user.metadata.suspendedBy && (
                         <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                          Suspendu par: <span className="font-medium">{user.metadata.suspendedBy}</span>
+                          Suspendu par: <span className="font-medium">{userNames[user.metadata.suspendedBy] || user.metadata.suspendedBy}</span>
                           {user.metadata.suspendedReason && (
                             <span> - Raison: {user.metadata.suspendedReason}</span>
                           )}

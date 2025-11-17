@@ -624,6 +624,132 @@ export class FirebaseSettingsService {
     }
   }
 
+  /**
+   * Charger la configuration Email (Resend + Gmail + Provider) depuis Firebase
+   */
+  static async loadEmailConfig(clubId: string): Promise<{
+    provider: 'gmail' | 'resend';
+    resend: {
+      apiKey: string;
+      fromEmail: string;
+      fromName: string;
+    };
+    gmail: {
+      clientId: string;
+      clientSecret: string;
+      refreshToken: string;
+      fromEmail: string;
+      fromName: string;
+    };
+  }> {
+    try {
+      const settingsRef = doc(db, 'clubs', clubId, 'settings', 'email_config');
+      const settingsDoc = await getDoc(settingsRef);
+
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        return {
+          provider: data.provider || 'resend',
+          resend: {
+            apiKey: data.resend?.apiKey || '',
+            fromEmail: data.resend?.fromEmail || 'onboarding@resend.dev',
+            fromName: data.resend?.fromName || 'Calypso Diving Club',
+          },
+          gmail: {
+            clientId: data.gmail?.clientId || '',
+            clientSecret: data.gmail?.clientSecret || '',
+            refreshToken: data.gmail?.refreshToken || '',
+            fromEmail: data.gmail?.fromEmail || 'noreply@calypso-diving.be',
+            fromName: data.gmail?.fromName || 'Calypso Diving Club',
+          },
+        };
+      }
+
+      // Default configuration (Resend)
+      return {
+        provider: 'resend',
+        resend: {
+          apiKey: '',
+          fromEmail: 'onboarding@resend.dev',
+          fromName: 'Calypso Diving Club',
+        },
+        gmail: {
+          clientId: '',
+          clientSecret: '',
+          refreshToken: '',
+          fromEmail: 'noreply@calypso-diving.be',
+          fromName: 'Calypso Diving Club',
+        },
+      };
+    } catch (error) {
+      console.error('Erreur lors du chargement de la configuration Email:', error);
+      return {
+        provider: 'resend',
+        resend: {
+          apiKey: '',
+          fromEmail: 'onboarding@resend.dev',
+          fromName: 'Calypso Diving Club',
+        },
+        gmail: {
+          clientId: '',
+          clientSecret: '',
+          refreshToken: '',
+          fromEmail: 'noreply@calypso-diving.be',
+          fromName: 'Calypso Diving Club',
+        },
+      };
+    }
+  }
+
+  /**
+   * Sauvegarder la configuration Email (Resend + Gmail + Provider) dans Firebase
+   */
+  static async saveEmailConfig(
+    clubId: string,
+    config: {
+      provider: 'gmail' | 'resend';
+      resend: {
+        apiKey: string;
+        fromEmail: string;
+        fromName: string;
+      };
+      gmail: {
+        clientId: string;
+        clientSecret: string;
+        refreshToken: string;
+        fromEmail: string;
+        fromName: string;
+      };
+    },
+    updatedBy?: string
+  ): Promise<void> {
+    try {
+      const settingsRef = doc(db, 'clubs', clubId, 'settings', 'email_config');
+      await setDoc(settingsRef, {
+        provider: config.provider,
+        resend: {
+          apiKey: config.resend.apiKey || '',
+          fromEmail: config.resend.fromEmail || 'onboarding@resend.dev',
+          fromName: config.resend.fromName || 'Calypso Diving Club',
+        },
+        gmail: {
+          clientId: config.gmail.clientId || '',
+          clientSecret: config.gmail.clientSecret || '',
+          refreshToken: config.gmail.refreshToken || '',
+          fromEmail: config.gmail.fromEmail || 'noreply@calypso-diving.be',
+          fromName: config.gmail.fromName || 'Calypso Diving Club',
+        },
+        updatedAt: serverTimestamp(),
+        updatedBy: updatedBy || 'unknown'
+      });
+
+      console.log('✅ Configuration Email sauvegardée dans Firebase');
+    } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde de la configuration Email:', error);
+      throw error;
+    }
+  }
+
 
   /**
    * Charger les paramètres de communication depuis Firebase

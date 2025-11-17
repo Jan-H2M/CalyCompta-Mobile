@@ -34,6 +34,9 @@ export default function IntegrationsSettings() {
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [isTestingAnthropic, setIsTestingAnthropic] = useState(false);
 
+  // Email Provider Selection
+  const [emailProvider, setEmailProvider] = useState<'gmail' | 'resend'>('resend');
+
   // Google Mail state
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleClientSecret, setGoogleClientSecret] = useState('');
@@ -43,6 +46,13 @@ export default function IntegrationsSettings() {
   const [googleFromEmail, setGoogleFromEmail] = useState('');
   const [googleFromName, setGoogleFromName] = useState('');
   const [isTestingGoogle, setIsTestingGoogle] = useState(false);
+
+  // Resend state
+  const [resendApiKey, setResendApiKey] = useState('');
+  const [showResendApiKey, setShowResendApiKey] = useState(false);
+  const [resendFromEmail, setResendFromEmail] = useState('');
+  const [resendFromName, setResendFromName] = useState('');
+  const [isTestingResend, setIsTestingResend] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,13 +74,23 @@ export default function IntegrationsSettings() {
       setOpenaiKey(fbOpenaiKey || '');
       setAnthropicKey(fbAnthropicKey || '');
 
+      // Load Email configuration (Resend + Gmail + Provider selection)
+      const emailConfig = await FirebaseSettingsService.loadEmailConfig(clubId);
+
+      // Set email provider
+      setEmailProvider(emailConfig.provider || 'resend');
+
+      // Load Resend configuration
+      setResendApiKey(emailConfig.resend?.apiKey || '');
+      setResendFromEmail(emailConfig.resend?.fromEmail || 'onboarding@resend.dev');
+      setResendFromName(emailConfig.resend?.fromName || 'Calypso Diving Club');
+
       // Load Google Mail configuration
-      const googleConfig = await FirebaseSettingsService.loadGoogleMailConfig(clubId);
-      setGoogleClientId(googleConfig.clientId || '');
-      setGoogleClientSecret(googleConfig.clientSecret || '');
-      setGoogleRefreshToken(googleConfig.refreshToken || '');
-      setGoogleFromEmail(googleConfig.fromEmail || 'noreply@calypso-diving.be');
-      setGoogleFromName(googleConfig.fromName || 'Calypso Diving Club');
+      setGoogleClientId(emailConfig.gmail?.clientId || '');
+      setGoogleClientSecret(emailConfig.gmail?.clientSecret || '');
+      setGoogleRefreshToken(emailConfig.gmail?.refreshToken || '');
+      setGoogleFromEmail(emailConfig.gmail?.fromEmail || 'noreply@calypso-diving.be');
+      setGoogleFromName(emailConfig.gmail?.fromName || 'Calypso Diving Club');
 
       // Initialize aiProviderService with loaded keys
       if (fbOpenaiKey) {
@@ -98,14 +118,24 @@ export default function IntegrationsSettings() {
         currentUser?.uid
       );
 
-      // Save Google Mail configuration
-      await FirebaseSettingsService.saveGoogleMailConfig(
+      // Save Email configuration (Resend + Gmail + Provider selection)
+      await FirebaseSettingsService.saveEmailConfig(
         clubId,
-        googleClientId.trim(),
-        googleClientSecret.trim(),
-        googleRefreshToken.trim(),
-        googleFromEmail.trim(),
-        googleFromName.trim(),
+        {
+          provider: emailProvider,
+          resend: {
+            apiKey: resendApiKey.trim(),
+            fromEmail: resendFromEmail.trim(),
+            fromName: resendFromName.trim(),
+          },
+          gmail: {
+            clientId: googleClientId.trim(),
+            clientSecret: googleClientSecret.trim(),
+            refreshToken: googleRefreshToken.trim(),
+            fromEmail: googleFromEmail.trim(),
+            fromName: googleFromName.trim(),
+          },
+        },
         currentUser?.uid
       );
 
@@ -209,6 +239,69 @@ export default function IntegrationsSettings() {
       }
     } finally {
       setIsTestingGoogle(false);
+    }
+  };
+
+  const handleTestResend = async () => {
+    if (!resendApiKey.trim()) {
+      toast.error('Veuillez entrer une clé API Resend');
+      return;
+    }
+
+    if (!user?.email) {
+      toast.error('Impossible de récupérer votre adresse email');
+      return;
+    }
+
+    // Ask user to save first if there are unsaved changes
+    const hasUnsavedChanges = true;
+    if (hasUnsavedChanges) {
+      toast.loading('Sauvegarde de la configuration...', { duration: 1000 });
+      await handleSaveConfig();
+    }
+
+    setIsTestingResend(true);
+    try {
+      // Send test email via Resend
+      const response = await fetch('/api/send-resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `${resendFromName || 'Calypso Diving Club'} <${resendFromEmail || 'onboarding@resend.dev'}>`,
+          to: user.email,
+          subject: '🧪 Email de test - Resend',
+          html: `
+            <h1>🎉 Configuration Resend réussie !</h1>
+            <p>Bonjour,</p>
+            <p>Votre configuration Resend est correctement configurée et fonctionnelle.</p>
+            <p><strong>Détails:</strong></p>
+            <ul>
+              <li>✅ Clé API Resend valide</li>
+              <li>✅ Connexion à Resend API établie</li>
+              <li>✅ Envoi d'emails activé</li>
+            </ul>
+            <p>Vous pouvez maintenant utiliser Resend pour envoyer des emails automatisés depuis CalyCompta.</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+              Cet email a été envoyé automatiquement par CalyCompta via Resend API
+            </p>
+          `,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(`✅ Email de test envoyé avec succès via Resend à ${user.email}`, { duration: 5000 });
+      } else {
+        throw new Error(data.error || 'Erreur lors de l\'envoi');
+      }
+    } catch (error: any) {
+      console.error('Resend test error:', error);
+      toast.error('❌ Impossible d\'envoyer l\'email via Resend. Vérifiez votre clé API', { duration: 5000 });
+    } finally {
+      setIsTestingResend(false);
     }
   };
 
@@ -399,23 +492,177 @@ export default function IntegrationsSettings() {
           </p>
         </div>
 
-        <div className="p-6">
-          {/* Google Mail */}
-          <div className="space-y-4">
+        <div className="p-6 space-y-8">
+          {/* Email Provider Toggle */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-bg-tertiary rounded-lg border border-gray-200 dark:border-dark-border">
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-dark-text-primary">Service Email actif</h4>
+              <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-1">
+                Sélectionnez le service à utiliser pour l'envoi d'emails
+              </p>
+            </div>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Mail className="h-5 w-5 text-red-600" />
+              <button
+                onClick={() => setEmailProvider('gmail')}
+                className={cn(
+                  'px-4 py-2 rounded-lg font-medium text-sm transition-all',
+                  emailProvider === 'gmail'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-dark-bg-secondary text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-dark-border hover:bg-gray-50'
+                )}
+              >
+                Gmail API
+              </button>
+              <button
+                onClick={() => setEmailProvider('resend')}
+                className={cn(
+                  'px-4 py-2 rounded-lg font-medium text-sm transition-all',
+                  emailProvider === 'resend'
+                    ? 'bg-green-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-dark-bg-secondary text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-dark-border hover:bg-gray-50'
+                )}
+              >
+                Resend
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-dark-border" />
+
+          {/* Resend */}
+          {emailProvider === 'resend' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Mail className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900 dark:text-dark-text-primary">Resend</h4>
+                  <p className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                    Service d'envoi d'emails moderne et simple - Recommandé ✨
+                  </p>
+                </div>
+                {resendApiKey ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-gray-400" />
+                )}
               </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900 dark:text-dark-text-primary">Google Mail (Gmail API)</h4>
-                <p className="text-xs text-gray-600 dark:text-dark-text-secondary">Service d'envoi d'emails via Gmail avec OAuth2</p>
+
+              {/* Resend API Key */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-primary mb-2">
+                  Clé API Resend
+                </label>
+                <div className="relative">
+                  <input
+                    type={showResendApiKey ? 'text' : 'password'}
+                    value={resendApiKey}
+                    onChange={(e) => setResendApiKey(e.target.value)}
+                    placeholder="re_..."
+                    className="w-full px-3 py-2 pr-10 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResendApiKey(!showResendApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:bg-dark-bg-tertiary rounded transition-colors"
+                  >
+                    {showResendApiKey ? (
+                      <EyeOff className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-500" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Obtenez votre clé sur <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">resend.com/api-keys</a>
+                </p>
               </div>
-              {googleClientId && googleClientSecret && googleRefreshToken ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-gray-400" />
+
+              {/* From Email and Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-primary mb-2">
+                    Email expéditeur
+                  </label>
+                  <input
+                    type="email"
+                    value={resendFromEmail}
+                    onChange={(e) => setResendFromEmail(e.target.value)}
+                    placeholder="onboarding@resend.dev"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Utilisez onboarding@resend.dev pour les tests
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-primary mb-2">
+                    Nom expéditeur
+                  </label>
+                  <input
+                    type="text"
+                    value={resendFromName}
+                    onChange={(e) => setResendFromName(e.target.value)}
+                    placeholder="Calypso Diving Club"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-sm text-green-800 dark:text-green-300">
+                  ✨ <strong>Pourquoi Resend?</strong>
+                </p>
+                <ul className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1 list-disc list-inside">
+                  <li>Configuration ultra-simple (juste une clé API)</li>
+                  <li>Excellente délivrabilité</li>
+                  <li>Pas de configuration OAuth complexe</li>
+                  <li>Domaines personnalisés faciles à configurer</li>
+                </ul>
+              </div>
+
+              {/* Test Button */}
+              {resendApiKey && (
+                <button
+                  onClick={handleTestResend}
+                  disabled={isTestingResend}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:bg-dark-bg-tertiary transition-colors disabled:opacity-50"
+                >
+                  {isTestingResend ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Envoi de l'email de test...
+                    </>
+                  ) : (
+                    <>
+                      <TestTube className="h-4 w-4" />
+                      Envoyer un email de test
+                    </>
+                  )}
+                </button>
               )}
             </div>
+          )}
+
+          {/* Google Mail */}
+          {emailProvider === 'gmail' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <Mail className="h-5 w-5 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900 dark:text-dark-text-primary">Google Mail (Gmail API)</h4>
+                  <p className="text-xs text-gray-600 dark:text-dark-text-secondary">Service d'envoi d'emails via Gmail avec OAuth2</p>
+                </div>
+                {googleClientId && googleClientSecret && googleRefreshToken ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
 
             {/* Client ID */}
             <div>
@@ -546,7 +793,8 @@ export default function IntegrationsSettings() {
                 )}
               </button>
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

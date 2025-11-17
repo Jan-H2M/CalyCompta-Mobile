@@ -36,54 +36,68 @@ export class GoogleMailService {
         throw new Error('User must be authenticated to send emails');
       }
 
-      // Load Gmail configuration from Firestore
-      const gmailConfig = await FirebaseSettingsService.loadGoogleMailConfig(clubId);
+      // Load email configuration from Firestore (includes provider selection)
+      const emailConfig = await FirebaseSettingsService.loadEmailConfig(clubId);
 
-      console.log('📧 Gmail Config loaded:', {
-        hasClientId: !!gmailConfig.clientId,
-        hasClientSecret: !!gmailConfig.clientSecret,
-        hasRefreshToken: !!gmailConfig.refreshToken,
-        fromEmail: gmailConfig.fromEmail,
-        fromName: gmailConfig.fromName
+      console.log('📧 Email Config loaded:', {
+        provider: emailConfig.provider,
+        fromEmail: emailConfig[emailConfig.provider].fromEmail,
+        fromName: emailConfig[emailConfig.provider].fromName
       });
 
-      if (!gmailConfig.clientId || !gmailConfig.clientSecret || !gmailConfig.refreshToken) {
-        const missingFields = [];
-        if (!gmailConfig.clientId) missingFields.push('Client ID');
-        if (!gmailConfig.clientSecret) missingFields.push('Client Secret');
-        if (!gmailConfig.refreshToken) missingFields.push('Refresh Token');
+      // Use the selected email provider
+      if (emailConfig.provider === 'resend') {
+        // Call Resend API via Vercel Serverless Function
+        const response = await fetch('/api/send-resend', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: `${emailConfig.resend.fromName || 'Calypso Diving Club'} <${emailConfig.resend.fromEmail || 'onboarding@resend.dev'}>`,
+            to,
+            subject,
+            html: htmlBody,
+          }),
+        });
 
-        throw new Error(`Gmail configuration is incomplete. Missing: ${missingFields.join(', ')}. Please configure Gmail in Settings > Integrations.`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send email via Resend');
+        }
+
+        const data = await response.json();
+        console.log('✅ Email envoyé avec succès via Resend:', data.messageId);
+        return data;
+      } else {
+        // Call Gmail API via Vercel Serverless Function
+        const response = await fetch('/api/send-gmail', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            clientId: emailConfig.gmail.clientId,
+            clientSecret: emailConfig.gmail.clientSecret,
+            refreshToken: emailConfig.gmail.refreshToken,
+            fromEmail: emailConfig.gmail.fromEmail || 'noreply@calypso-diving.be',
+            fromName: emailConfig.gmail.fromName || 'Calypso Diving Club',
+            to,
+            subject,
+            htmlBody,
+            textBody: textBody || htmlBody.replace(/<[^>]*>/g, ''),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send email via Gmail');
+        }
+
+        const data = await response.json();
+        console.log('✅ Email envoyé avec succès via Gmail:', data.messageId);
+        return data;
       }
-
-      // Call Vercel Serverless Function
-      const response = await fetch('/api/send-gmail', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId: gmailConfig.clientId,
-          clientSecret: gmailConfig.clientSecret,
-          refreshToken: gmailConfig.refreshToken,
-          fromEmail: gmailConfig.fromEmail || 'noreply@calypso-diving.be',
-          fromName: gmailConfig.fromName || 'Calypso Diving Club',
-          to,
-          subject,
-          htmlBody,
-          textBody: textBody || htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML tags as fallback
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send email');
-      }
-
-      const data = await response.json();
-
-      console.log('✅ Email envoyé avec succès:', data.messageId);
-      return data;
     } catch (error: any) {
       console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
 
