@@ -126,27 +126,28 @@ export const DEFAULT_PASSWORD_RESET_TEMPLATE = `
       </p>
     </div>
 
+    <!-- Instructions -->
+    <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 30px 0; border-radius: 4px;">
+      <p style="margin: 0 0 15px 0; font-size: 15px; font-weight: 600; color: #92400E;">
+        ⚠️ Important - Changement de mot de passe obligatoire
+      </p>
+      <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: #78350F;">
+        <li style="margin-bottom: 8px;">Cliquez sur le bouton ci-dessous pour accéder à l'application</li>
+        <li style="margin-bottom: 8px;">Connectez-vous avec le mot de passe temporaire ci-dessus</li>
+        <li style="margin-bottom: 8px;">Vous serez automatiquement invité à créer un <strong>nouveau mot de passe</strong></li>
+        <li style="margin-bottom: 8px;">Choisissez un mot de passe fort et unique (minimum 8 caractères)</li>
+        <li>Conservez vos nouveaux identifiants en lieu sûr</li>
+      </ol>
+    </div>
+
     <!-- Security Notice -->
     <div style="background: #FEE2E2; border-left: 4px solid #EF4444; padding: 20px; margin: 30px 0; border-radius: 4px;">
       <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: 600; color: #991B1B;">
-        🔒 Sécurité de votre compte
+        🔒 Vous n'avez pas demandé cette réinitialisation ?
       </p>
       <p style="margin: 0; font-size: 14px; color: #7F1D1D; line-height: 1.5;">
-        Pour des raisons de sécurité, nous vous recommandons de changer ce mot de passe temporaire dès votre première connexion. Choisissez un mot de passe fort et unique.
+        Si vous n'êtes pas à l'origine de cette demande de réinitialisation, contactez immédiatement un administrateur pour sécuriser votre compte.
       </p>
-    </div>
-
-    <!-- Instructions -->
-    <div style="background: #F0FDF4; border-left: 4px solid #10B981; padding: 20px; margin: 30px 0; border-radius: 4px;">
-      <p style="margin: 0 0 15px 0; font-size: 15px; font-weight: 600; color: #065F46;">
-        ℹ️ Comment vous reconnecter
-      </p>
-      <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: #047857;">
-        <li style="margin-bottom: 8px;">Cliquez sur le bouton ci-dessous pour accéder à l'application</li>
-        <li style="margin-bottom: 8px;">Connectez-vous avec votre email et le mot de passe temporaire</li>
-        <li style="margin-bottom: 8px;">Changez votre mot de passe dans <strong>Paramètres → Profil</strong></li>
-        <li>Si vous n'avez pas demandé cette réinitialisation, contactez immédiatement un administrateur</li>
-      </ol>
     </div>
 
     <!-- CTA Button -->
