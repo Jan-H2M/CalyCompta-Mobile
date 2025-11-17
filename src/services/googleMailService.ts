@@ -1,4 +1,8 @@
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getTemplate, renderTemplate } from './emailTemplateService';
+import type { EmailTemplateType } from '@/types/emailTemplates';
+import type { User } from '@/types/user.types';
 
 /**
  * Service pour envoyer des emails via Google Mail API (Gmail)
@@ -158,5 +162,121 @@ export class GoogleMailService {
     `;
 
     return this.sendEmail(clubId, toEmail, subject, htmlBody);
+  }
+
+  /**
+   * Envoyer un email à un utilisateur avec un template
+   *
+   * @param clubId - ID du club
+   * @param user - Utilisateur destinataire
+   * @param templateId - ID du template à utiliser
+   * @param templateType - Type du template
+   * @param temporaryPassword - Mot de passe temporaire à inclure
+   * @param sentByUserId - ID de l'utilisateur qui envoie l'email
+   * @param sentByName - Nom de l'utilisateur qui envoie l'email
+   * @returns Promise avec le résultat de l'envoi
+   */
+  static async sendUserEmail(
+    clubId: string,
+    user: User,
+    templateId: string,
+    templateType: EmailTemplateType,
+    temporaryPassword: string,
+    sentByUserId: string,
+    sentByName: string
+  ): Promise<{ success: boolean; messageId: string; message: string }> {
+    try {
+      // 1. Récupérer le template
+      const template = await getTemplate(clubId, templateId);
+      if (!template) {
+        throw new Error('Template non trouvé');
+      }
+
+      // 2. Préparer les données pour le rendu
+      const templateData = {
+        recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.displayName || user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email,
+        temporaryPassword,
+        clubName: 'Calypso Diving Club', // TODO: Get from club settings
+        appUrl: window.location.origin,
+        // Inject style variables
+        ...template.styles,
+      };
+
+      // 3. Rendre le template
+      const renderResult = renderTemplate(template, templateData);
+      if (!renderResult.success || !renderResult.html) {
+        throw new Error(renderResult.error || 'Erreur lors du rendu du template');
+      }
+
+      // 4. Rendre le sujet
+      const Handlebars = require('handlebars');
+      const subjectTemplate = Handlebars.compile(template.subject);
+      const renderedSubject = subjectTemplate(templateData);
+
+      // 5. Envoyer l'email
+      const sendResult = await this.sendEmail(
+        clubId,
+        user.email,
+        renderedSubject,
+        renderResult.html
+      );
+
+      // 6. Sauvegarder dans l'historique
+      try {
+        const emailHistoryRef = collection(db, 'clubs', clubId, 'email_history');
+        await addDoc(emailHistoryRef, {
+          recipientEmail: user.email,
+          recipientName: templateData.recipientName,
+          recipientId: user.id,
+          subject: renderedSubject,
+          htmlContent: renderResult.html,
+          templateId,
+          templateType,
+          templateName: template.name,
+          sendType: 'manual',
+          sentBy: sentByUserId,
+          sentByName,
+          status: 'sent',
+          createdAt: serverTimestamp(),
+          sentAt: serverTimestamp(),
+          clubId,
+        });
+      } catch (historyError) {
+        console.error('Erreur lors de la sauvegarde de l\'historique:', historyError);
+        // Ne pas faire échouer l'envoi si la sauvegarde échoue
+      }
+
+      return sendResult;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de l\'envoi de l\'email utilisateur:', error);
+
+      // Sauvegarder l'échec dans l'historique
+      try {
+        const emailHistoryRef = collection(db, 'clubs', clubId, 'email_history');
+        await addDoc(emailHistoryRef, {
+          recipientEmail: user.email,
+          recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.displayName || user.email,
+          recipientId: user.id,
+          subject: 'Email non envoyé',
+          htmlContent: '',
+          templateId,
+          templateType,
+          sendType: 'manual',
+          sentBy: sentByUserId,
+          sentByName,
+          status: 'failed',
+          statusMessage: error.message,
+          createdAt: serverTimestamp(),
+          clubId,
+        });
+      } catch (historyError) {
+        console.error('Erreur lors de la sauvegarde de l\'échec:', historyError);
+      }
+
+      throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
   }
 }

@@ -234,7 +234,7 @@ export default function IntegrationsSettings() {
             <Key className="h-6 w-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Gestion des Clés API</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Services Externes</h2>
             <p className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1">
               Configuration centralisée des services externes
             </p>

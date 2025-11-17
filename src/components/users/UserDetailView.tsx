@@ -3,7 +3,10 @@ import { User, UserRole, AuditLog } from '@/types/user.types';
 import { PermissionService } from '@/services/permissionService';
 import { PasswordService } from '@/services/passwordService';
 import { UserService } from '@/services/userService';
+import { GoogleMailService } from '@/services/googleMailService';
 import { AuditLogList } from './AuditLogList';
+import { SendUserEmailModal } from './SendUserEmailModal';
+import type { EmailTemplateType } from '@/types/emailTemplates';
 import {
   X, Save, Shield, User as UserIcon, Mail,
   Calendar, Clock, CheckCircle, XCircle, AlertTriangle,
@@ -12,6 +15,7 @@ import {
 import { formatDate } from '@/utils/utils';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { generateDefaultPassword } from '@/utils/passwordGenerator';
 
 interface UserDetailViewProps {
   user: User | null;
@@ -49,9 +53,10 @@ export function UserDetailView({
   const [activeTab, setActiveTab] = useState<'details' | 'permissions' | 'audit'>('details');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
-  const [resetPassword, setResetPassword] = useState<string>('123456');
+  const [resetPassword, setResetPassword] = useState<string>(generateDefaultPassword());
   const [resetRequireChange, setResetRequireChange] = useState<boolean>(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [showSendEmailModal, setShowSendEmailModal] = useState(false);
 
   // Update formData when user changes (including lifras_id from Membre type)
   useEffect(() => {
@@ -221,7 +226,7 @@ export function UserDetailView({
 
       toast.success('Mot de passe réinitialisé avec succès !');
       setShowResetPasswordModal(false);
-      setResetPassword('123456');
+      setResetPassword(generateDefaultPassword());
       setResetRequireChange(true);
     } catch (error: any) {
       console.error('Error resetting password:', error);
@@ -229,6 +234,20 @@ export function UserDetailView({
     } finally {
       setIsResetting(false);
     }
+  };
+
+  const handleSendEmail = async (templateType: string, templateId: string, password: string) => {
+    if (!user || !clubId || !currentUser || !firebaseAuthUser) return;
+
+    await GoogleMailService.sendUserEmail(
+      clubId,
+      user,
+      templateId,
+      templateType as EmailTemplateType,
+      password,
+      firebaseAuthUser.uid,
+      currentUser.displayName || currentUser.email
+    );
   };
 
   const getRoleBadge = (role: UserRole) => {
@@ -469,13 +488,23 @@ export function UserDetailView({
               )}
 
               {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
-                <button
-                  onClick={() => setShowResetPasswordModal(true)}
-                  className="px-3 py-1.5 text-sm bg-orange-100/20 text-orange-100 rounded-lg hover:bg-orange-100/30 font-medium"
-                >
-                  <Lock className="w-4 h-4 inline mr-1" />
-                  Réinitialiser mot de passe
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowResetPasswordModal(true)}
+                    className="px-3 py-1.5 text-sm bg-orange-100/20 text-orange-100 rounded-lg hover:bg-orange-100/30 font-medium"
+                  >
+                    <Lock className="w-4 h-4 inline mr-1" />
+                    Réinitialiser mot de passe
+                  </button>
+
+                  <button
+                    onClick={() => setShowSendEmailModal(true)}
+                    className="px-3 py-1.5 text-sm bg-cyan-100/20 text-cyan-100 rounded-lg hover:bg-cyan-100/30 font-medium"
+                  >
+                    <Mail className="w-4 h-4 inline mr-1" />
+                    Envoyer Email
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -926,7 +955,7 @@ export function UserDetailView({
                     value={resetPassword}
                     onChange={(e) => setResetPassword(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="123456"
+                    placeholder={generateDefaultPassword()}
                   />
                   <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">
                     Minimum 6 caractères
@@ -953,7 +982,7 @@ export function UserDetailView({
                 <button
                   onClick={() => {
                     setShowResetPasswordModal(false);
-                    setResetPassword('123456');
+                    setResetPassword(generateDefaultPassword());
                     setResetRequireChange(true);
                   }}
                   className="flex-1 px-4 py-2 bg-gray-100 dark:bg-dark-bg-tertiary text-gray-700 dark:text-dark-text-primary rounded-lg hover:bg-gray-200 font-medium"
@@ -972,6 +1001,16 @@ export function UserDetailView({
             </div>
           </div>
         </>
+      )}
+
+      {/* Send Email Modal */}
+      {user && showSendEmailModal && (
+        <SendUserEmailModal
+          user={user}
+          isOpen={showSendEmailModal}
+          onClose={() => setShowSendEmailModal(false)}
+          onSend={handleSendEmail}
+        />
       )}
     </>
   );

@@ -11,6 +11,8 @@ import { Timestamp } from 'firebase/firestore';
 export type EmailTemplateType =
   | 'pending_demands'      // Rappel demandes en attente
   | 'accounting_codes'     // Codes comptables quotidiens
+  | 'account_activated'    // Compte utilisateur activé
+  | 'password_reset'       // Mot de passe réinitialisé
   | 'events'               // Événements
   | 'transactions'         // Transactions
   | 'members'              // Membres
@@ -186,6 +188,116 @@ export const ACCOUNTING_CODES_VARIABLES: EmailTemplateVariable[] = [
         ],
       },
     ], null, 2),
+  },
+];
+
+/**
+ * Variable definitions for "account_activated" template type
+ */
+export const ACCOUNT_ACTIVATED_VARIABLES: EmailTemplateVariable[] = [
+  {
+    name: 'recipientName',
+    type: 'string',
+    required: true,
+    description: 'Nom complet du destinataire',
+    example: 'Jean Dupont',
+  },
+  {
+    name: 'firstName',
+    type: 'string',
+    required: false,
+    description: 'Prénom du destinataire',
+    example: 'Jean',
+  },
+  {
+    name: 'lastName',
+    type: 'string',
+    required: false,
+    description: 'Nom de famille du destinataire',
+    example: 'Dupont',
+  },
+  {
+    name: 'email',
+    type: 'string',
+    required: true,
+    description: 'Email du destinataire',
+    example: 'jean.dupont@example.com',
+  },
+  {
+    name: 'temporaryPassword',
+    type: 'string',
+    required: true,
+    description: 'Mot de passe temporaire',
+    example: 'CalyCompta2025-01',
+  },
+  {
+    name: 'clubName',
+    type: 'string',
+    required: true,
+    description: 'Nom du club',
+    example: 'Calypso Diving Club',
+  },
+  {
+    name: 'appUrl',
+    type: 'string',
+    required: true,
+    description: 'URL de l\'application',
+    example: 'https://calycompta.vercel.app',
+  },
+];
+
+/**
+ * Variable definitions for "password_reset" template type
+ */
+export const PASSWORD_RESET_VARIABLES: EmailTemplateVariable[] = [
+  {
+    name: 'recipientName',
+    type: 'string',
+    required: true,
+    description: 'Nom complet du destinataire',
+    example: 'Jean Dupont',
+  },
+  {
+    name: 'firstName',
+    type: 'string',
+    required: false,
+    description: 'Prénom du destinataire',
+    example: 'Jean',
+  },
+  {
+    name: 'lastName',
+    type: 'string',
+    required: false,
+    description: 'Nom de famille du destinataire',
+    example: 'Dupont',
+  },
+  {
+    name: 'email',
+    type: 'string',
+    required: true,
+    description: 'Email du destinataire',
+    example: 'jean.dupont@example.com',
+  },
+  {
+    name: 'temporaryPassword',
+    type: 'string',
+    required: true,
+    description: 'Nouveau mot de passe temporaire',
+    example: 'CalyCompta2025-01',
+  },
+  {
+    name: 'clubName',
+    type: 'string',
+    required: true,
+    description: 'Nom du club',
+    example: 'Calypso Diving Club',
+  },
+  {
+    name: 'appUrl',
+    type: 'string',
+    required: true,
+    description: 'URL de l\'application',
+    example: 'https://calycompta.vercel.app',
   },
 ];
 
@@ -593,6 +705,10 @@ export function getVariablesForType(emailType: EmailTemplateType): EmailTemplate
       return PENDING_DEMANDS_VARIABLES;
     case 'accounting_codes':
       return ACCOUNTING_CODES_VARIABLES;
+    case 'account_activated':
+      return ACCOUNT_ACTIVATED_VARIABLES;
+    case 'password_reset':
+      return PASSWORD_RESET_VARIABLES;
     case 'custom':
       return [];  // User defines their own variables
     default:
@@ -604,11 +720,19 @@ export function getVariablesForType(emailType: EmailTemplateType): EmailTemplate
  * Helper: Get default template HTML for a type
  */
 export function getDefaultTemplateForType(emailType: EmailTemplateType): string {
+  // Import user email templates dynamically to avoid circular dependencies
+  const { DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE, DEFAULT_PASSWORD_RESET_TEMPLATE } =
+    require('../constants/defaultUserEmailTemplates');
+
   switch (emailType) {
     case 'pending_demands':
       return DEFAULT_PENDING_DEMANDS_TEMPLATE;
     case 'accounting_codes':
       return DEFAULT_ACCOUNTING_CODES_TEMPLATE;
+    case 'account_activated':
+      return DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE;
+    case 'password_reset':
+      return DEFAULT_PASSWORD_RESET_TEMPLATE;
     default:
       return '<html><body><h1>{{title}}</h1><p>{{content}}</p></body></html>';
   }

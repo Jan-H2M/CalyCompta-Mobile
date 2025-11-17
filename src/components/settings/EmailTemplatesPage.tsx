@@ -12,7 +12,7 @@ import {
   duplicateTemplate,
 } from '@/services/emailTemplateService';
 import type { EmailTemplate } from '@/types/emailTemplates';
-import { Mail, Plus, Edit, Trash2, Copy, Search, Filter, ArrowLeft } from 'lucide-react';
+import { Mail, Plus, Edit, Trash2, Copy, Search, Filter, ChevronLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmailTemplateEditor } from './EmailTemplateEditor';
 
@@ -138,14 +138,26 @@ export function EmailTemplatesPage() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        {/* Back button */}
-        <button
-          onClick={() => navigate('/parametres/communication')}
-          className="flex items-center gap-2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary mb-4 transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          Retour
-        </button>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary mb-4">
+          <button
+            onClick={() => navigate('/parametres')}
+            className="hover:text-calypso-blue dark:hover:text-calypso-aqua transition-colors"
+          >
+            Paramètres
+          </button>
+          <ChevronLeft className="h-4 w-4 rotate-180" />
+          <button
+            onClick={() => navigate('/parametres/communication')}
+            className="hover:text-calypso-blue dark:hover:text-calypso-aqua transition-colors"
+          >
+            Communication
+          </button>
+          <ChevronLeft className="h-4 w-4 rotate-180" />
+          <span className="text-gray-900 dark:text-dark-text-primary font-medium">
+            Templates d'Emails
+          </span>
+        </div>
 
         <div className="flex items-center justify-between">
           <div>

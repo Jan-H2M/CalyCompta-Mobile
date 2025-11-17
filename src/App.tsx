@@ -25,6 +25,8 @@ import IntegrationsSettings from '@/components/settings/IntegrationsSettings';
 // import { SystemeSettings } from '@/components/settings/SystemeSettings';
 import { CommunicationSettingsPage } from '@/components/settings/CommunicationSettingsPage';
 import { EmailTemplatesPage } from '@/components/settings/EmailTemplatesPage';
+import { CommunicationDashboard } from '@/pages/CommunicationDashboard';
+import { EmailHistoryPage } from '@/pages/EmailHistoryPage';
 import { EvenementsSettings } from '@/components/settings/EvenementsSettings';
 import { ImportSettings } from '@/components/settings/ImportSettings';
 import { GeneralSettings } from '@/components/settings/GeneralSettings';
@@ -100,8 +102,10 @@ function AppWithToaster({ user, loading }: { user: User | null; loading: boolean
               <Route path="parametres/comptabilite" element={<ComptabiliteSettings />} />
               <Route path="parametres/utilisateurs" element={<UtilisateursSettings />} />
               <Route path="parametres/evenements" element={<EvenementsSettings />} />
-              <Route path="parametres/communication" element={<CommunicationSettingsPage />} />
+              <Route path="parametres/communication" element={<CommunicationDashboard />} />
+              <Route path="parametres/communication/automatisee" element={<CommunicationSettingsPage />} />
               <Route path="parametres/communication/templates" element={<EmailTemplatesPage />} />
+              <Route path="parametres/communication/emails-sortants" element={<EmailHistoryPage />} />
               <Route path="parametres/integrations" element={<IntegrationsSettings />} />
               <Route path="parametres/automatisation" element={<AutomatisationSettings />} />
               {/* /parametres/systeme removed - all buttons now in /parametres */}

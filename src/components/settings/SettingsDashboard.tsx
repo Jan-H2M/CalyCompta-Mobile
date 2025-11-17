@@ -74,7 +74,7 @@ export function SettingsDashboard() {
     },
     {
       id: 'integrations',
-      title: 'Gestion des Clés API',
+      title: 'Services Externes',
       description: 'Configuration des services externes (IA, Email, etc.)',
       icon: <Key className="h-8 w-8" />,
       iconBg: 'bg-blue-100 dark:bg-blue-900/30',
