@@ -18,7 +18,9 @@ export const DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE = `
 
   <!-- Header with logo -->
   <div style="background: {{headerGradient}}; color: white; padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
-    <img src="https://caly.club/logo-horizontal.jpg" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+    {{#if logoUrl}}
+    <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+    {{/if}}
     <h1 style="margin: 0; font-size: 28px;">🎉 Bienvenue !</h1>
     <p style="margin: 10px 0 0 0; opacity: 0.95; font-size: 16px;">Votre compte a été activé</p>
   </div>
@@ -102,7 +104,9 @@ export const DEFAULT_PASSWORD_RESET_TEMPLATE = `
 
   <!-- Header with logo -->
   <div style="background: {{headerGradient}}; color: white; padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
-    <img src="https://caly.club/logo-horizontal.jpg" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+    {{#if logoUrl}}
+    <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+    {{/if}}
     <h1 style="margin: 0; font-size: 28px;">🔑 Réinitialisation de mot de passe</h1>
     <p style="margin: 10px 0 0 0; opacity: 0.95; font-size: 16px;">Votre mot de passe a été réinitialisé</p>
   </div>

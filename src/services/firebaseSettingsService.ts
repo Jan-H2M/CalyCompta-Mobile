@@ -253,6 +253,7 @@ export class FirebaseSettingsService {
       doubleApprovalThreshold: 100,
       enableDoubleApproval: true,
       clubName: 'Calypso Diving Club',
+      logoUrl: '',
       fiscalYear: new Date().getFullYear(), // DEPRECATED - kept for backward compatibility
       fiscalYearStartDate: new Date(new Date().getFullYear(), 0, 1), // 1er janvier année courante
       fiscalYearEndDate: new Date(new Date().getFullYear(), 11, 31), // 31 décembre

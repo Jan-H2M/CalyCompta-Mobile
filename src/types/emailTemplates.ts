@@ -238,6 +238,13 @@ export const ACCOUNT_ACTIVATED_VARIABLES: EmailTemplateVariable[] = [
     example: 'Calypso Diving Club',
   },
   {
+    name: 'logoUrl',
+    type: 'string',
+    required: false,
+    description: 'URL du logo du club',
+    example: 'https://example.com/logo.png',
+  },
+  {
     name: 'appUrl',
     type: 'string',
     required: true,
@@ -291,6 +298,13 @@ export const PASSWORD_RESET_VARIABLES: EmailTemplateVariable[] = [
     required: true,
     description: 'Nom du club',
     example: 'Calypso Diving Club',
+  },
+  {
+    name: 'logoUrl',
+    type: 'string',
+    required: false,
+    description: 'URL du logo du club',
+    example: 'https://example.com/logo.png',
   },
   {
     name: 'appUrl',
@@ -711,6 +725,7 @@ export const ACCOUNT_ACTIVATED_SAMPLE_DATA: EmailTemplateSampleData = {
     email: 'marie.dubois@example.com',
     temporaryPassword: 'CalyCompta2025-42',
     clubName: 'Calypso Diving Club',
+    logoUrl: 'https://caly.club/logo-horizontal.jpg',
     appUrl: 'https://calycompta.vercel.app',
   },
 };
@@ -730,6 +745,7 @@ export const PASSWORD_RESET_SAMPLE_DATA: EmailTemplateSampleData = {
     email: 'pierre.martin@example.com',
     temporaryPassword: 'CalyCompta2025-78',
     clubName: 'Calypso Diving Club',
+    logoUrl: 'https://caly.club/logo-horizontal.jpg',
     appUrl: 'https://calycompta.vercel.app',
   },
 };

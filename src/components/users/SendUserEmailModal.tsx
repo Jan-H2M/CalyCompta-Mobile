@@ -6,6 +6,7 @@ import { EmailTemplate, EmailTemplateType } from '@/types/emailTemplates';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { generateDefaultPassword } from '@/utils/passwordGenerator';
+import { FirebaseSettingsService } from '@/services/firebaseSettingsService';
 import Handlebars from 'handlebars';
 import toast from 'react-hot-toast';
 
@@ -31,6 +32,23 @@ export function SendUserEmailModal({
   const [showPassword, setShowPassword] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [clubSettings, setClubSettings] = useState<any>(null);
+
+  // Load club settings
+  useEffect(() => {
+    if (!clubId) return;
+
+    const loadClubSettings = async () => {
+      try {
+        const settings = await FirebaseSettingsService.loadGeneralSettings(clubId);
+        setClubSettings(settings);
+      } catch (error) {
+        console.error('Error loading club settings:', error);
+      }
+    };
+
+    loadClubSettings();
+  }, [clubId]);
 
   // Load templates from Firestore
   useEffect(() => {
@@ -73,7 +91,7 @@ export function SendUserEmailModal({
 
   // Generate preview when template or password changes
   useEffect(() => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || !clubSettings) return;
 
     try {
       const template = Handlebars.compile(selectedTemplate.htmlContent);
@@ -83,7 +101,8 @@ export function SendUserEmailModal({
         lastName: user.nom || '',
         email: user.email,
         temporaryPassword,
-        clubName: 'Calypso Diving Club', // TODO: Get from club settings
+        clubName: clubSettings.clubName || 'Calypso Diving Club',
+        logoUrl: clubSettings.logoUrl || '',
         appUrl: window.location.origin,
         // Inject style variables
         ...selectedTemplate.styles,
@@ -95,7 +114,7 @@ export function SendUserEmailModal({
       console.error('Error rendering preview:', error);
       setPreviewHtml('<p>Erreur lors de la génération de l\'aperçu</p>');
     }
-  }, [selectedTemplate, temporaryPassword, user]);
+  }, [selectedTemplate, temporaryPassword, user, clubSettings]);
 
   const handleSend = async () => {
     if (!selectedTemplate) {

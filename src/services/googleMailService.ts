@@ -230,14 +230,18 @@ export class GoogleMailService {
         throw new Error('Template non trouvé');
       }
 
-      // 2. Préparer les données pour le rendu
+      // 2. Récupérer les paramètres du club (nom et logo)
+      const clubSettings = await FirebaseSettingsService.loadGeneralSettings(clubId);
+
+      // 3. Préparer les données pour le rendu
       const templateData = {
         recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.displayName || user.email,
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email,
         temporaryPassword,
-        clubName: 'Calypso Diving Club', // TODO: Get from club settings
+        clubName: clubSettings.clubName || 'Calypso Diving Club',
+        logoUrl: clubSettings.logoUrl || '',
         appUrl: window.location.origin,
         // Inject style variables
         ...template.styles,
