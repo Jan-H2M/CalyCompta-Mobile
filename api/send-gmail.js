@@ -2,9 +2,9 @@
 import { google } from 'googleapis';
 
 // Initialize Gmail API
-async function getGmailClient(accessToken) {
+async function getGmailClient(authToken) {
   const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({ access_token: accessToken });
+  oauth2Client.setCredentials({ access_token: authToken });
   return google.gmail({ version: 'v1', auth: oauth2Client });
 }
 
