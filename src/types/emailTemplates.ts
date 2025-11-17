@@ -159,6 +159,13 @@ export const ACCOUNTING_CODES_VARIABLES: EmailTemplateVariable[] = [
     example: '1245.50',
   },
   {
+    name: 'logoUrl',
+    type: 'string',
+    required: false,
+    description: 'URL du logo du club',
+    example: 'https://example.com/logo.png',
+  },
+  {
     name: 'appUrl',
     type: 'string',
     required: true,
@@ -356,6 +363,13 @@ export const PENDING_DEMANDS_VARIABLES: EmailTemplateVariable[] = [
     example: '5',
   },
   {
+    name: 'logoUrl',
+    type: 'string',
+    required: false,
+    description: 'URL du logo du club',
+    example: 'https://example.com/logo.png',
+  },
+  {
     name: 'appUrl',
     type: 'string',
     required: true,
@@ -397,6 +411,9 @@ export const DEFAULT_ACCOUNTING_CODES_TEMPLATE = `
 
   <!-- Header -->
   <div style="background: {{headerGradient}}; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    {{#if logoUrl}}
+    <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+    {{/if}}
     <h1 style="margin: 0; font-size: 24px;">📊 Rapport Codes Comptables</h1>
     <p style="margin: 10px 0 0 0; opacity: 0.9;">{{clubName}} - {{date}}</p>
   </div>
@@ -507,6 +524,9 @@ export const DEFAULT_PENDING_DEMANDS_TEMPLATE = `
 
   <!-- Header -->
   <div style="background: {{headerGradient}}; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    {{#if logoUrl}}
+    <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+    {{/if}}
     <h1 style="margin: 0; font-size: 24px;">📧 Demandes de remboursement en attente</h1>
     <p style="margin: 10px 0 0 0; opacity: 0.9;">{{clubName}}</p>
   </div>
@@ -591,6 +611,7 @@ export const ACCOUNTING_CODES_SAMPLE_DATA: EmailTemplateSampleData = {
     date: '09/11/2025',
     totalTransactions: 7,
     totalAmount: 1245.50,
+    logoUrl: 'https://caly.club/logo-horizontal.jpg',
     appUrl: 'https://calycompta.vercel.app',
     accountingCodes: [
       {
@@ -677,6 +698,7 @@ export const PENDING_DEMANDS_SAMPLE_DATA: EmailTemplateSampleData = {
     totalAmount: 245.50,
     urgentCount: 1,
     demandesCount: 3,
+    logoUrl: 'https://caly.club/logo-horizontal.jpg',
     appUrl: 'https://calycompta.vercel.app',
     demandes: [
       {
