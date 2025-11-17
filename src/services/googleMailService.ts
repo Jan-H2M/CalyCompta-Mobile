@@ -39,8 +39,21 @@ export class GoogleMailService {
       // Load Gmail configuration from Firestore
       const gmailConfig = await FirebaseSettingsService.loadGoogleMailConfig(clubId);
 
+      console.log('📧 Gmail Config loaded:', {
+        hasClientId: !!gmailConfig.clientId,
+        hasClientSecret: !!gmailConfig.clientSecret,
+        hasRefreshToken: !!gmailConfig.refreshToken,
+        fromEmail: gmailConfig.fromEmail,
+        fromName: gmailConfig.fromName
+      });
+
       if (!gmailConfig.clientId || !gmailConfig.clientSecret || !gmailConfig.refreshToken) {
-        throw new Error('Gmail configuration is incomplete. Please configure Gmail in Settings > Integrations.');
+        const missingFields = [];
+        if (!gmailConfig.clientId) missingFields.push('Client ID');
+        if (!gmailConfig.clientSecret) missingFields.push('Client Secret');
+        if (!gmailConfig.refreshToken) missingFields.push('Refresh Token');
+
+        throw new Error(`Gmail configuration is incomplete. Missing: ${missingFields.join(', ')}. Please configure Gmail in Settings > Integrations.`);
       }
 
       // Call Vercel Serverless Function
