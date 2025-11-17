@@ -15,9 +15,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { accessToken, to, subject, html } = req.body;
+    const { authToken, clubId, to, subject, htmlBody, textBody } = req.body;
 
-    if (!accessToken || !to || !subject || !html) {
+    if (!authToken || !to || !subject || !htmlBody) {
+      console.error('❌ Missing fields:', { authToken: !!authToken, to: !!to, subject: !!subject, htmlBody: !!htmlBody });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
       'MIME-Version: 1.0',
       `Subject: ${subject}`,
       '',
-      html
+      htmlBody
     ].join('\n');
 
     // Encode message in base64url
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
       .replace(/=+$/, '');
 
     // Send email via Gmail API
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(authToken);
     const result = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
