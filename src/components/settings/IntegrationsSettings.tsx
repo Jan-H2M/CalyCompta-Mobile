@@ -263,6 +263,10 @@ export default function IntegrationsSettings() {
     setIsTestingResend(true);
     try {
       // Send test email via Resend
+      // TEMPORARY: Resend free tier only allows sending to verified email (jan@h2m.ai)
+      // Once domain is verified, this can be changed back to user.email
+      const testEmailTo = 'jan@h2m.ai';
+
       const response = await fetch('/api/send-resend', {
         method: 'POST',
         headers: {
@@ -271,7 +275,7 @@ export default function IntegrationsSettings() {
         body: JSON.stringify({
           apiKey: resendApiKey.trim(),
           from: `${resendFromName || 'Calypso Diving Club'} <${resendFromEmail || 'onboarding@resend.dev'}>`,
-          to: user.email,
+          to: testEmailTo, // Using verified email for testing
           subject: '🧪 Email de test - Resend',
           html: `
             <h1>🎉 Configuration Resend réussie !</h1>
