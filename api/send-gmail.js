@@ -93,9 +93,21 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('❌ Error sending email:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      errors: error.errors,
+      response: error.response?.data
+    });
     return res.status(500).json({
       success: false,
       error: error.message || 'Erreur lors de l\'envoi de l\'email',
+      details: {
+        code: error.code,
+        status: error.status,
+        errors: error.errors
+      }
     });
   }
 }
