@@ -19,6 +19,16 @@ export default async function handler(req, res) {
   try {
     const { apiKey, from, to, subject, html } = req.body;
 
+    console.log('📧 [RESEND] Starting email send request');
+    console.log('📧 [RESEND] Request details:', {
+      hasApiKey: !!apiKey,
+      apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'none',
+      from: from || 'default',
+      to,
+      subject,
+      htmlLength: html?.length || 0
+    });
+
     // Validate required fields
     if (!apiKey || !to || !subject || !html) {
       console.error('❌ Missing required fields:', {
@@ -34,9 +44,11 @@ export default async function handler(req, res) {
     }
 
     // Initialize Resend with API key from request body
+    console.log('📧 [RESEND] Initializing Resend client...');
     const resend = new Resend(apiKey);
 
     // Send email
+    console.log('📧 [RESEND] Calling resend.emails.send()...');
     const data = await resend.emails.send({
       from: from || 'Calypso Diving Club <onboarding@resend.dev>', // Use resend test domain or your verified domain
       to,
@@ -44,7 +56,8 @@ export default async function handler(req, res) {
       html,
     });
 
-    console.log('✅ Email sent successfully via Resend:', data.id);
+    console.log('✅ [RESEND] Email sent successfully!');
+    console.log('✅ [RESEND] Response from Resend:', JSON.stringify(data, null, 2));
 
     return res.status(200).json({
       success: true,
@@ -52,11 +65,13 @@ export default async function handler(req, res) {
       message: 'Email envoyé avec succès via Resend',
     });
   } catch (error) {
-    console.error('❌ Error sending email via Resend:', error);
-    console.error('❌ Error details:', {
-      message: error.message,
-      name: error.name,
-    });
+    console.error('❌ [RESEND] Error sending email:', error);
+    console.error('❌ [RESEND] Error message:', error.message);
+    console.error('❌ [RESEND] Error name:', error.name);
+    console.error('❌ [RESEND] Error stack:', error.stack);
+
+    // Log full error object
+    console.error('❌ [RESEND] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
     return res.status(500).json({
       success: false,
