@@ -269,6 +269,7 @@ export default function IntegrationsSettings() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          apiKey: resendApiKey.trim(),
           from: `${resendFromName || 'Calypso Diving Club'} <${resendFromEmail || 'onboarding@resend.dev'}>`,
           to: user.email,
           subject: '🧪 Email de test - Resend',

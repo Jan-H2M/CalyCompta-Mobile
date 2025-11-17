@@ -54,6 +54,7 @@ export class GoogleMailService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            apiKey: emailConfig.resend.apiKey,
             from: `${emailConfig.resend.fromName || 'Calypso Diving Club'} <${emailConfig.resend.fromEmail || 'onboarding@resend.dev'}>`,
             to,
             subject,

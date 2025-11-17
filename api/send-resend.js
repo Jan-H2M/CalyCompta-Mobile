@@ -17,23 +17,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { from, to, subject, html } = req.body;
+    const { apiKey, from, to, subject, html } = req.body;
 
     // Validate required fields
-    if (!to || !subject || !html) {
+    if (!apiKey || !to || !subject || !html) {
       console.error('❌ Missing required fields:', {
+        apiKey: !!apiKey,
         to: !!to,
         subject: !!subject,
         html: !!html
       });
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['to', 'subject', 'html']
+        required: ['apiKey', 'to', 'subject', 'html']
       });
     }
 
-    // Initialize Resend with API key from environment
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    // Initialize Resend with API key from request body
+    const resend = new Resend(apiKey);
 
     // Send email
     const data = await resend.emails.send({
