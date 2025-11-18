@@ -12,7 +12,8 @@ import {
   Bot,
   User,
   Filter,
-  Loader
+  Loader,
+  Eye
 } from 'lucide-react';
 import { EmailHistoryEntry, EmailStatus, EmailSendType } from '@/types/emailHistory';
 import { EmailHistoryDetailView } from '@/components/communication/EmailHistoryDetailView';
@@ -209,10 +210,16 @@ export function EmailHistoryPage() {
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-secondary uppercase tracking-wider">
+                    Heure
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-secondary uppercase tracking-wider">
                     Destinataire
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-secondary uppercase tracking-wider">
                     Statut
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-dark-text-secondary uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -220,8 +227,7 @@ export function EmailHistoryPage() {
                 {filteredEmails.map((email) => (
                   <tr
                     key={email.id}
-                    onClick={() => setSelectedEmail(email)}
-                    className="hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary cursor-pointer transition-colors"
+                    className="hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -232,6 +238,18 @@ export function EmailHistoryPage() {
                       <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-dark-text-primary">
                         <CalendarIcon className="h-4 w-4 text-gray-400" />
                         {formatDate(email.createdAt)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-dark-text-primary">
+                        <Clock className="h-4 w-4 text-gray-400" />
+                        {email.createdAt.toDate?.().toLocaleTimeString('fr-FR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) || new Date(email.createdAt).toLocaleTimeString('fr-FR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -248,6 +266,15 @@ export function EmailHistoryPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(email.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <button
+                        onClick={() => setSelectedEmail(email)}
+                        className="inline-flex items-center justify-center p-2 text-gray-600 dark:text-dark-text-secondary hover:text-calypso-blue dark:hover:text-calypso-aqua hover:bg-gray-100 dark:hover:bg-dark-bg-tertiary rounded-lg transition-colors"
+                        aria-label="Voir les détails"
+                      >
+                        <Eye className="h-5 w-5" />
+                      </button>
                     </td>
                   </tr>
                 ))}

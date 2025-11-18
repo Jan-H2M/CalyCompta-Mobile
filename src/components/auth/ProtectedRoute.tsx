@@ -1,8 +1,10 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Permission, UserRole } from '@/types/user.types';
 import { AlertCircle } from 'lucide-react';
+import { signOut } from '@/lib/firebase';
+import toast from 'react-hot-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,6 +14,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRole, requiredPermission }: ProtectedRouteProps) {
   const { user, appUser, loading, hasPermission, hasAnyPermission, hasRole } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -28,6 +31,17 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
 
   // Vérifier si l'utilisateur est actif
   if (appUser && !appUser.isActive) {
+    const handleReturnToLogin = async () => {
+      try {
+        await signOut();
+        toast.success('Vous avez été déconnecté');
+        navigate('/connexion', { replace: true });
+      } catch (error) {
+        console.error('Erreur lors de la déconnexion:', error);
+        toast.error('Erreur lors de la déconnexion');
+      }
+    };
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg-tertiary">
         <div className="max-w-md w-full bg-white dark:bg-dark-bg-secondary shadow-lg rounded-lg p-8 text-center">
@@ -37,7 +51,7 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
             Votre compte n'est pas encore activé. Veuillez contacter un administrateur.
           </p>
           <button
-            onClick={() => window.location.href = '/connexion'}
+            onClick={handleReturnToLogin}
             className="px-4 py-2 bg-calypso-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
             Retour à la connexion
