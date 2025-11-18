@@ -182,67 +182,102 @@ async function getRecipientEmails(db, clubId, roles) {
 }
 
 /**
- * Send email via Gmail API
+ * Send email via Resend or Gmail based on configuration
  */
 async function sendEmail(db, clubId, to, subject, htmlContent) {
-  // Load Google Mail config
+  // Load email configuration
   const configDoc = await db
     .collection('clubs')
     .doc(clubId)
     .collection('settings')
-    .doc('google_mail')
+    .doc('email_config')
     .get();
 
   if (!configDoc.exists) {
-    throw new Error('Google Mail configuration not found');
+    throw new Error('Email configuration not found');
   }
 
-  const config = configDoc.data();
-  const { clientId, clientSecret, refreshToken, fromEmail, fromName } = config;
+  const emailConfig = configDoc.data();
+  const provider = emailConfig.provider || 'resend';
 
-  if (!clientId || !clientSecret || !refreshToken || !fromEmail) {
-    throw new Error('Incomplete Google Mail configuration');
+  console.log(`📧 Using email provider: ${provider}`);
+
+  if (provider === 'resend') {
+    // Use Resend
+    const { Resend } = require('resend');
+    const resendConfig = emailConfig.resend;
+
+    if (!resendConfig || !resendConfig.apiKey || !resendConfig.fromEmail) {
+      throw new Error('Incomplete Resend configuration');
+    }
+
+    const resend = new Resend(resendConfig.apiKey);
+    const fromHeader = resendConfig.fromName
+      ? `${resendConfig.fromName} <${resendConfig.fromEmail}>`
+      : resendConfig.fromEmail;
+
+    const result = await resend.emails.send({
+      from: fromHeader,
+      to,
+      subject,
+      html: htmlContent,
+    });
+
+    return result.data.id;
+
+  } else if (provider === 'gmail') {
+    // Use Gmail
+    const gmailConfig = emailConfig.gmail;
+
+    if (!gmailConfig || !gmailConfig.clientId || !gmailConfig.clientSecret ||
+        !gmailConfig.refreshToken || !gmailConfig.fromEmail) {
+      throw new Error('Incomplete Gmail configuration');
+    }
+
+    const { google } = require('googleapis');
+    const OAuth2 = google.auth.OAuth2;
+
+    const oauth2Client = new OAuth2(
+      gmailConfig.clientId,
+      gmailConfig.clientSecret,
+      'https://developers.google.com/oauthplayground'
+    );
+
+    oauth2Client.setCredentials({ refresh_token: gmailConfig.refreshToken });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+    const fromHeader = gmailConfig.fromName
+      ? `${gmailConfig.fromName} <${gmailConfig.fromEmail}>`
+      : gmailConfig.fromEmail;
+
+    const messageParts = [
+      `From: ${fromHeader}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      htmlContent,
+    ];
+
+    const message = messageParts.join('\n');
+    const encodedMessage = Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage },
+    });
+
+    return result.data.id;
+
+  } else {
+    throw new Error(`Unknown email provider: ${provider}`);
   }
-
-  // Initialize Google OAuth2
-  const { google } = require('googleapis');
-  const OAuth2 = google.auth.OAuth2;
-
-  const oauth2Client = new OAuth2(
-    clientId,
-    clientSecret,
-    'https://developers.google.com/oauthplayground'
-  );
-
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-  // Create email message
-  const fromHeader = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
-  const messageParts = [
-    `From: ${fromHeader}`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/html; charset=utf-8',
-    '',
-    htmlContent,
-  ];
-
-  const message = messageParts.join('\n');
-  const encodedMessage = Buffer.from(message)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  const result = await gmail.users.messages.send({
-    userId: 'me',
-    requestBody: { raw: encodedMessage },
-  });
-
-  return result.data.id;
 }
 
 /**
