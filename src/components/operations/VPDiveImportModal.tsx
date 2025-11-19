@@ -3,9 +3,10 @@ import { X, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
 import { VPDiveParser } from '@/services/vpDiveParser';
 import { EventTransactionMatcher } from '@/services/eventTransactionMatcher';
 import { Evenement } from '@/types';
-import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { SessionService } from '@/services/sessionService';
 import toast from 'react-hot-toast';
 
 interface VPDiveImportModalProps {
@@ -223,14 +224,129 @@ export function VPDiveImportModal({ isOpen, onClose, clubId, fiscalYearId, onSuc
     eventData.updated_at = serverTimestamp();
     eventData.organisateur_id = appUser?.id || '';
 
+    // ========================================
+    // 🔒 PRE-FLIGHT VALIDATION CHECKS
+    // ========================================
+    console.log('\n🔍 ===== PRE-FLIGHT SECURITY CHECKS =====');
+
+    // CHECK 1: User Authentication
+    console.log('  ✓ User authenticated:', !!appUser?.id);
+    console.log('  ✓ User ID:', appUser?.id);
+    console.log('  ✓ User email:', appUser?.email);
+    console.log('  ✓ User role:', appUser?.app_role);
+
+    // CHECK 2: Required Fields
+    console.log('  ✓ organisateur_id set:', eventData.organisateur_id);
+    console.log('  ✓ fiscal_year_id set:', eventData.fiscal_year_id);
+    console.log('  ✓ type:', eventData.type);
+    console.log('  ✓ club_id:', eventData.club_id);
+
+    // CHECK 3: Session Validation (with retry)
+    console.log('  🔐 Checking session validity...');
+    const maxRetries = 3;
+    let sessionReady = false;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        sessionReady = await SessionService.validateSession(clubId, appUser.id);
+
+        if (sessionReady) {
+          console.log(`  ✅ Session valid (attempt ${attempt + 1}/${maxRetries})`);
+          break;
+        } else {
+          console.warn(`  ⚠️ Session not ready (attempt ${attempt + 1}/${maxRetries})`);
+
+          if (attempt < maxRetries - 1) {
+            console.log('  ⏳ Waiting 1 second before retry...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      } catch (sessionError) {
+        console.error(`  ❌ Session check error (attempt ${attempt + 1}/${maxRetries}):`, sessionError);
+
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    if (!sessionReady) {
+      const errorMsg = 'Session non valide - Veuillez vous reconnecter et réessayer';
+      console.error('  ❌ FATAL: Session validation failed after all retries');
+      throw new Error(errorMsg);
+    }
+
+    // CHECK 4: Fiscal Year Validation
+    console.log('  📅 Validating fiscal year...');
+    try {
+      const fyRef = doc(db, 'clubs', clubId, 'fiscal_years', fiscalYearId);
+      const fySnap = await getDoc(fyRef);
+
+      if (!fySnap.exists()) {
+        console.error('  ❌ Fiscal year document not found:', fiscalYearId);
+        throw new Error(`Année fiscale "${fiscalYearId}" introuvable`);
+      }
+
+      const fyData = fySnap.data();
+      console.log('  ✓ Fiscal year exists:', fiscalYearId);
+      console.log('  ✓ Fiscal year status:', fyData.status);
+
+      // Check if user has permission to modify this fiscal year
+      const userRole = appUser?.app_role;
+
+      if (fyData.status === 'closed' && !['admin', 'superadmin'].includes(userRole)) {
+        const errorMsg = 'Année fiscale fermée - Seuls les administrateurs peuvent créer des événements';
+        console.error('  ❌', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      if (fyData.status === 'permanently_closed' && userRole !== 'superadmin') {
+        const errorMsg = 'Année fiscale définitivement fermée - Seul un super-administrateur peut créer des événements';
+        console.error('  ❌', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('  ✅ Fiscal year validation passed');
+
+    } catch (fyError: any) {
+      console.error('  ❌ Fiscal year validation failed:', fyError.message);
+      throw fyError;
+    }
+
+    console.log('✅ All pre-flight checks passed - proceeding with operation creation\n');
+
+    // ========================================
+    // 💾 CREATE OPERATION IN FIRESTORE
+    // ========================================
     console.log('📝 Event data to save:', {
-      ...eventData,
       organisateur_id: eventData.organisateur_id,
       fiscal_year_id: eventData.fiscal_year_id,
-      type: eventData.type
+      type: eventData.type,
+      titre: eventData.titre,
+      date_debut: eventData.date_debut,
+      club_id: eventData.club_id
     });
 
-    const docRef = await addDoc(eventsRef, eventData);
+    let docRef;
+    try {
+      docRef = await addDoc(eventsRef, eventData);
+      console.log('✅ Operation created successfully:', docRef.id);
+    } catch (createError: any) {
+      console.error('❌ FIRESTORE PERMISSION ERROR:', {
+        code: createError.code,
+        message: createError.message,
+        details: createError
+      });
+
+      // Provide user-friendly error message
+      let userMessage = 'Erreur lors de la création de l\'événement';
+
+      if (createError.code === 'permission-denied') {
+        userMessage += ' - Permission refusée. Vérifiez votre session et vos droits.';
+      }
+
+      throw new Error(userMessage + '\n' + createError.message);
+    }
 
     // Save participants as inscriptions
     console.log('📊 Starting inscription save process...');
