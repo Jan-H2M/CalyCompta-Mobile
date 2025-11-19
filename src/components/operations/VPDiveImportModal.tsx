@@ -166,6 +166,16 @@ export function VPDiveImportModal({ isOpen, onClose, clubId, fiscalYearId, onSuc
     console.log('📦 evenement:', evenement);
     console.log('👥 participants:', participants);
     console.log('📊 Nombre de participants:', participants?.length || 0);
+    console.log('👤 Current user:', appUser?.id, appUser?.email);
+    console.log('📅 Fiscal year ID:', fiscalYearId);
+
+    if (!appUser?.id) {
+      throw new Error('Utilisateur non authentifié - impossible de créer un événement');
+    }
+
+    if (!fiscalYearId) {
+      throw new Error('Année fiscale non définie - impossible de créer un événement');
+    }
 
     // 🆕 MIGRATION: Write to 'operations' collection with type='evenement'
     const eventsRef = collection(db, 'clubs', clubId, 'operations');
@@ -203,10 +213,22 @@ export function VPDiveImportModal({ isOpen, onClose, clubId, fiscalYearId, onSuc
             eventData[key] = new Date();
           }
         }
-      } else if (value !== null && value !== undefined) {
+      } else if (value !== null && value !== undefined && value !== '') {
         eventData[key] = value;
       }
     }
+
+    // Add timestamps and ensure required fields
+    eventData.created_at = serverTimestamp();
+    eventData.updated_at = serverTimestamp();
+    eventData.organisateur_id = appUser?.id || '';
+
+    console.log('📝 Event data to save:', {
+      ...eventData,
+      organisateur_id: eventData.organisateur_id,
+      fiscal_year_id: eventData.fiscal_year_id,
+      type: eventData.type
+    });
 
     const docRef = await addDoc(eventsRef, eventData);
 
