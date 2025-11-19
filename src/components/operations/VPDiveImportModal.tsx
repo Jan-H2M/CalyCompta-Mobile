@@ -5,6 +5,7 @@ import { EventTransactionMatcher } from '@/services/eventTransactionMatcher';
 import { Evenement } from '@/types';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface VPDiveImportModalProps {
@@ -21,6 +22,7 @@ interface DuplicateInfo {
 }
 
 export function VPDiveImportModal({ isOpen, onClose, clubId, fiscalYearId, onSuccess }: VPDiveImportModalProps) {
+  const { appUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importedEvent, setImportedEvent] = useState<any>(null);
   const [duplicateWarnings, setDuplicateWarnings] = useState<DuplicateInfo[]>([]);
@@ -172,9 +174,11 @@ export function VPDiveImportModal({ isOpen, onClose, clubId, fiscalYearId, onSuc
       type: 'evenement' as const,
       club_id: clubId,
       fiscal_year_id: fiscalYearId || null,  // ✅ Required by Firestore rules
+      organisateur_id: appUser?.id || '',  // ✅ Required by Firestore rules - set to current user
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
-      created_by: 'vpdive_import'
+      created_by: 'vpdive_import',
+      import_source: 'vpdive'  // Track that this was imported from VP Dive
     };
 
     // Remove participants and stats from event data

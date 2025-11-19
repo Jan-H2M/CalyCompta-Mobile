@@ -85,10 +85,16 @@ service cloud.firestore {
 
       // Settings subcollection with special rules
       match /settings/{settingId} {
-        // API Keys - RESTRICTED to admin/superadmin only
-        allow read: if settingId in ['ai_api_keys', 'google_mail']
-          ? (isAdmin(clubId) && hasValidSession(clubId))
-          : isAuthenticated();
+        // Security, permissions, and AI API keys - can be read without session (loaded during auth initialization)
+        // - security: needed for session validation itself
+        // - permissions: needed to determine user capabilities during auth
+        // - ai_api_keys: loaded during auth context initialization
+        // Other API Keys - RESTRICTED to admin/superadmin with valid session
+        allow read: if settingId in ['security', 'permissions', 'ai_api_keys']
+          ? (settingId == 'security' || settingId == 'permissions' ? isAuthenticated() : isAdmin(clubId))
+          : settingId == 'google_mail'
+            ? (isAdmin(clubId) && hasValidSession(clubId))
+            : isAuthenticated();
 
         // Only admins can write, and they need a valid session
         allow write: if isAdmin(clubId) && hasValidSession(clubId);
