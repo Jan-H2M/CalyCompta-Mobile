@@ -74,7 +74,7 @@ export class UserService {
           lastName: data.lastName || data.nom,
           nom: data.nom || data.lastName || '',
           prenom: data.prenom || data.firstName || '',
-          role: (data.app_role || data.role || 'user') as UserRole,
+          app_role: (data.app_role || data.role || 'user') as UserRole,
           member_status: memberStatus as any,
           status: (data.status || memberStatus) as UserStatus, // Legacy field
           isActive: isActiveFromDb, // Read directly from Firestore!
@@ -131,7 +131,7 @@ export class UserService {
         lastName: data.lastName || data.nom,
         nom: data.nom || data.lastName || '',
         prenom: data.prenom || data.firstName || '',
-        role: (data.app_role || data.role || 'user') as UserRole,
+        app_role: (data.app_role || data.role || 'user') as UserRole,
         member_status: memberStatus as any,
         status: (data.status || memberStatus) as UserStatus, // Legacy field
         isActive: memberStatus === 'active', // Legacy field
