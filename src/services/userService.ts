@@ -62,7 +62,9 @@ export class UserService {
 
         // Build User object with proper defaults for required fields
         // Support both User type (status/isActive) AND Membre type (member_status)
-        const memberStatus = data.member_status || (data.isActive !== false && data.actif !== false ? 'active' : 'inactive');
+        // ⚠️ IMPORTANT: Read isActive directly from Firestore, don't recalculate it!
+        const isActiveFromDb = data.isActive !== undefined ? data.isActive : (data.actif !== false);
+        const memberStatus = data.member_status || (isActiveFromDb ? 'active' : 'inactive');
 
         const user: Membre = {
           id: doc.id,
@@ -75,7 +77,7 @@ export class UserService {
           role: (data.app_role || data.role || 'user') as UserRole,
           member_status: memberStatus as any,
           status: (data.status || memberStatus) as UserStatus, // Legacy field
-          isActive: memberStatus === 'active', // Legacy field
+          isActive: isActiveFromDb, // Read directly from Firestore!
           has_app_access: data.has_app_access !== false,
           is_diver: data.is_diver !== false,
           has_lifras: data.has_lifras || false,
@@ -351,6 +353,15 @@ export class UserService {
       }
 
       const userData = userDoc.data();
+
+      console.log('🔄 Current user status:', {
+        userId: dto.userId,
+        currentIsActive: userData.isActive,
+        currentActif: userData.actif,
+        currentStatus: userData.status,
+        wantToActivate: dto.activate
+      });
+
       const updateData: any = {
         isActive: dto.activate,
         actif: dto.activate, // For backward compatibility with old field name
@@ -369,9 +380,20 @@ export class UserService {
         }
       }
 
+      console.log('💾 About to update with data:', updateData);
+      console.log('📍 Document path:', `clubs/${clubId}/members/${dto.userId}`);
+
       await updateDoc(userRef, updateData);
 
+      console.log('✅ Update completed successfully');
+
       // Log audit entry
+      console.log('🔍 userData before audit log:', {
+        email: userData.email,
+        displayName: userData.displayName,
+        allKeys: Object.keys(userData)
+      });
+
       const auditLogData: any = {
         userId: actionBy,
         userEmail: userData.email,
@@ -390,6 +412,9 @@ export class UserService {
       if (dto.reason) {
         auditLogData.details = { reason: dto.reason };
       }
+
+      console.log('📝 Audit log keys:', Object.keys(auditLogData));
+      console.log('📝 Has undefined values:', Object.entries(auditLogData).filter(([k, v]) => v === undefined));
 
       await this.createAuditLog(clubId, auditLogData);
     } catch (error) {
@@ -555,19 +580,44 @@ export class UserService {
     try {
       const auditRef = collection(db, `clubs/${clubId}/audit_logs`);
 
-      // Filter out undefined values to prevent Firestore errors
-      const cleanedData: any = {};
-      Object.keys(logData).forEach(key => {
-        const value = (logData as any)[key];
-        if (value !== undefined) {
-          cleanedData[key] = value;
+      // Recursively filter out undefined values to prevent Firestore errors
+      const cleanValue = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return null;
         }
+        if (typeof obj !== 'object') {
+          return obj;
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(cleanValue);
+        }
+
+        const cleaned: any = {};
+        Object.keys(obj).forEach(key => {
+          const value = obj[key];
+          if (value !== undefined) {
+            cleaned[key] = cleanValue(value);
+          }
+        });
+        return cleaned;
+      };
+
+      const cleanedData = cleanValue(logData);
+
+      console.log('🧹 Cleaned audit data:', JSON.stringify(cleanedData, null, 2));
+      console.log('🧹 Final data to save:', {
+        ...cleanedData,
+        timestamp: 'serverTimestamp()'
       });
 
-      await setDoc(doc(auditRef), {
+      const finalData = {
         ...cleanedData,
         timestamp: logData.timestamp || serverTimestamp()
-      });
+      };
+
+      console.log('🧹 Has undefined in final?', Object.entries(finalData).filter(([k, v]) => v === undefined));
+
+      await setDoc(doc(auditRef), finalData);
     } catch (error) {
       console.error('Error creating audit log:', error);
       // Don't throw - audit logging failure shouldn't block the main operation
