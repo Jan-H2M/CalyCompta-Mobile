@@ -340,6 +340,7 @@ export function MembresManagement() {
                           disabled={!hasPermission('users.assignRole')}
                           className="text-sm border border-gray-300 dark:border-dark-border rounded px-2 py-1 dark:bg-dark-bg-primary dark:text-dark-text-primary"
                         >
+                          <option value="membre">Membre</option>
                           <option value="user">Utilisateur</option>
                           <option value="validateur">Validateur</option>
                           <option value="admin">Administrateur</option>

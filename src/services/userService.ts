@@ -58,7 +58,7 @@ export class UserService {
       const users: Membre[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        console.log('👤 Loading user:', doc.id, data.email);
+        console.log('👤 Loading user:', doc.id, data.email, '| app_role from Firestore:', data.app_role);
 
         // Build User object with proper defaults for required fields
         // Support both User type (status/isActive) AND Membre type (member_status)
@@ -440,10 +440,10 @@ export class UserService {
       }
 
       const userData = userDoc.data();
-      const previousRole = userData.role;
+      const previousRole = userData.app_role || userData.role;
 
       await updateDoc(userRef, {
-        role: dto.newRole,
+        app_role: dto.newRole,
         updatedAt: serverTimestamp(),
         'metadata.roleChangedBy': changedBy,
         'metadata.roleChangedAt': serverTimestamp()
@@ -457,8 +457,8 @@ export class UserService {
         targetId: dto.userId,
         targetType: 'user',
         targetName: userData.displayName,
-        previousValue: { role: previousRole },
-        newValue: { role: dto.newRole },
+        previousValue: { app_role: previousRole },
+        newValue: { app_role: dto.newRole },
         timestamp: Timestamp.now(),
         clubId: clubId,
         severity: 'warning'

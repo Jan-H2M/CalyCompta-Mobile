@@ -428,22 +428,33 @@ export async function changeAppRole(
   changedBy?: string
 ): Promise<void> {
   try {
+    console.log('🔄 [changeAppRole] Starting role change:', { clubId, membreId, newRole, changedBy });
+
     // Vérifier que le membre a accès app
     const membre = await getMembreById(clubId, membreId);
+    console.log('👤 [changeAppRole] Current member data:', {
+      id: membre?.id,
+      has_app_access: membre?.has_app_access,
+      current_app_role: membre?.app_role
+    });
+
     if (!membre?.has_app_access) {
       throw new Error('Le membre doit avoir accès à l\'application pour changer de rôle');
     }
 
+    console.log('📝 [changeAppRole] Calling updateMembre with app_role:', newRole);
     await updateMembre(clubId, membreId, {
       app_role: newRole,
     }, changedBy);
+    console.log('✅ [changeAppRole] updateMembre completed');
 
     await logAuditAction(clubId, membreId, 'app_role_changed', changedBy || 'system', {
       old_role: membre.app_role,
       new_role: newRole,
     });
+    console.log('✅ [changeAppRole] Role change complete');
   } catch (error) {
-    console.error('Error changing app role:', error);
+    console.error('❌ [changeAppRole] Error:', error);
     throw error;
   }
 }
