@@ -47,7 +47,9 @@ export function UserDetailView({
     lastName: '',
     phoneNumber: '',
     role: 'user',
-    ...user
+    ...user,
+    // Ensure role is synced with app_role
+    role: user?.app_role || user?.role || 'user'
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<'details' | 'permissions' | 'audit'>('details');
