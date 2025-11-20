@@ -372,7 +372,7 @@ export class UserService {
       await updateDoc(userRef, updateData);
 
       // Log audit entry
-      await this.createAuditLog(clubId, {
+      const auditLogData: any = {
         userId: actionBy,
         userEmail: userData.email,
         action: dto.activate ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
@@ -381,11 +381,17 @@ export class UserService {
         targetName: userData.displayName,
         previousValue: { isActive: !dto.activate },
         newValue: { isActive: dto.activate },
-        details: dto.reason ? { reason: dto.reason } : undefined,
         timestamp: Timestamp.now(),
         clubId: clubId,
         severity: 'info'
-      });
+      };
+
+      // Only add details if reason is provided
+      if (dto.reason) {
+        auditLogData.details = { reason: dto.reason };
+      }
+
+      await this.createAuditLog(clubId, auditLogData);
     } catch (error) {
       console.error('Error toggling user activation:', error);
       throw new Error('Impossible de modifier le statut de l\'utilisateur');
@@ -419,7 +425,7 @@ export class UserService {
       });
 
       // Log audit entry
-      await this.createAuditLog(clubId, {
+      const auditLogData: any = {
         userId: changedBy,
         userEmail: userData.email,
         action: 'ROLE_CHANGED',
@@ -428,11 +434,17 @@ export class UserService {
         targetName: userData.displayName,
         previousValue: { role: previousRole },
         newValue: { role: dto.newRole },
-        details: dto.reason ? { reason: dto.reason } : undefined,
         timestamp: Timestamp.now(),
         clubId: clubId,
         severity: 'warning'
-      });
+      };
+
+      // Only add details if reason is provided
+      if (dto.reason) {
+        auditLogData.details = { reason: dto.reason };
+      }
+
+      await this.createAuditLog(clubId, auditLogData);
     } catch (error) {
       console.error('Error changing user role:', error);
       throw new Error('Impossible de changer le rôle de l\'utilisateur');
