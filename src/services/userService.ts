@@ -554,8 +554,18 @@ export class UserService {
   private static async createAuditLog(clubId: string, logData: Omit<AuditLog, 'id'>): Promise<void> {
     try {
       const auditRef = collection(db, `clubs/${clubId}/audit_logs`);
+
+      // Filter out undefined values to prevent Firestore errors
+      const cleanedData: any = {};
+      Object.keys(logData).forEach(key => {
+        const value = (logData as any)[key];
+        if (value !== undefined) {
+          cleanedData[key] = value;
+        }
+      });
+
       await setDoc(doc(auditRef), {
-        ...logData,
+        ...cleanedData,
         timestamp: logData.timestamp || serverTimestamp()
       });
     } catch (error) {
