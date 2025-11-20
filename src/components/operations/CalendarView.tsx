@@ -124,6 +124,17 @@ export function CalendarView({ events, onEventClick }: CalendarViewProps) {
                     </h2>
 
                     <div className="flex items-center gap-2">
+                        {/* Date Picker for quick navigation */}
+                        <input
+                            type="month"
+                            value={`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`}
+                            onChange={(e) => {
+                                const [year, month] = e.target.value.split('-');
+                                setCurrentDate(new Date(parseInt(year), parseInt(month) - 1, 1));
+                            }}
+                            className="px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-border rounded-lg focus:ring-1 focus:ring-blue-500 bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary"
+                        />
+
                         <button
                             onClick={goToToday}
                             className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
