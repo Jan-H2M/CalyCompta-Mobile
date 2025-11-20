@@ -81,15 +81,21 @@ export function LoginForm() {
       let errorMessage = 'Erreur lors de la connexion';
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'Aucun compte trouvé avec cette adresse email';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Mot de passe incorrect';
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        // Message spécifique pour mot de passe incorrect ou credentials invalides
+        errorMessage = 'Mot de passe incorrect. Si votre mot de passe a été réinitialisé récemment par un administrateur, veuillez utiliser le mot de passe temporaire qui vous a été envoyé par email.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Adresse email invalide';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Trop de tentatives. Veuillez réessayer plus tard';
       }
 
-      toast.error(errorMessage);
+      toast.error(errorMessage, {
+        duration: 6000, // Plus long pour laisser le temps de lire
+        style: {
+          maxWidth: '500px', // Message plus large pour être lisible
+        }
+      });
     } finally {
       setIsLoading(false);
     }

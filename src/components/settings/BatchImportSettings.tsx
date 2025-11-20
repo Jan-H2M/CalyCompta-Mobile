@@ -37,7 +37,7 @@ interface ImportResult {
 
 export function BatchImportSettings() {
   const navigate = useNavigate();
-  const { clubId } = useAuth();
+  const { clubId, appUser } = useAuth();
 
   // Add error boundary
   if (!clubId) {
@@ -220,6 +220,7 @@ export function BatchImportSettings() {
             type: 'evenement',
             club_id: clubId,
             fiscal_year_id: selectedFiscalYear?.id || null,  // Required by Firestore Rules
+            organisateur_id: appUser?.id || '',  // ✅ Required by Firestore rules
             titre: vpData.event.titre,
             description: vpData.event.description,
             date: vpData.event.date,

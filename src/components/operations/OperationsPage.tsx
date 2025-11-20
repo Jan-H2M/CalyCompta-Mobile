@@ -28,6 +28,7 @@ import { VPDiveParser } from '@/services/vpDiveParser';
 import { EventTransactionMatcher } from '@/services/eventTransactionMatcher';
 import { Evenement, TransactionBancaire, InscriptionEvenement, DemandeRemboursement, DocumentJustificatif, Operation } from '@/types';
 import { EventFormModal } from '../evenements/EventFormModal';
+import { SourceBadge } from '../evenements/SourceBadge';
 import { TransactionLinkingPanel } from '@/components/commun/TransactionLinkingPanel';
 import { ExpenseLinkingPanel } from '../evenements/ExpenseLinkingPanel';
 import { AutoMatchDialog } from '../evenements/AutoMatchDialog';
@@ -41,6 +42,7 @@ import { SubventionFormModal } from './SubventionFormModal';
 import { AutreOperationFormModal } from './AutreOperationFormModal';
 import { TransactionDetailView } from '../banque/TransactionDetailView';
 import { DemandeDetailView } from '../depenses/DemandeDetailView';
+import { CalendarView } from './CalendarView';
 import {
   linkInscriptionToTransaction,
   unlinkInscriptionTransaction,
@@ -129,6 +131,9 @@ export function OperationsPage() {
   type SortDirection = 'asc' | 'desc' | null;
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  // View mode state (table or calendar)
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
   // Load events, transactions and expenses from Firestore on mount and when filter changes
   useEffect(() => {
@@ -330,7 +335,7 @@ export function OperationsPage() {
 
         return updatedMap;
       });
-      
+
     } catch (error) {
       console.error('Error loading events:', error);
       toast.error('Erreur lors du chargement des événements');
@@ -366,9 +371,9 @@ export function OperationsPage() {
           ...data,
           id: doc.id,
           date_execution: data.date_execution?.toDate?.() ||
-                         (data.date_execution ? new Date(data.date_execution) : new Date()),
+            (data.date_execution ? new Date(data.date_execution) : new Date()),
           date_valeur: data.date_valeur?.toDate?.() ||
-                      (data.date_valeur ? new Date(data.date_valeur) : new Date()),
+            (data.date_valeur ? new Date(data.date_valeur) : new Date()),
           created_at: data.created_at?.toDate?.() || new Date(),
           updated_at: data.updated_at?.toDate?.() || new Date(),
           type: data.montant > 0 ? 'income' : 'expense'
@@ -1509,6 +1514,8 @@ export function OperationsPage() {
         const docRef = await addDoc(eventsRef, {
           ...cleanedData,
           club_id: clubId,
+          fiscal_year_id: selectedFiscalYear?.id || null,  // ✅ Required by Firestore rules
+          organisateur_id: appUser?.id || '',  // ✅ Required by Firestore rules
           created_at: serverTimestamp(),
           updated_at: serverTimestamp(),
           created_by: 'manual'
@@ -1591,6 +1598,7 @@ export function OperationsPage() {
           ...cleanedData,
           club_id: clubId,
           fiscal_year_id: selectedFiscalYear?.id || null,  // Required by Firestore Rules
+          organisateur_id: appUser?.id || '',  // ✅ Required by Firestore rules
           created_at: serverTimestamp(),
           updated_at: serverTimestamp(),
           created_by: 'manual'
@@ -1660,6 +1668,7 @@ export function OperationsPage() {
           ...cleanedData,
           club_id: clubId,
           fiscal_year_id: selectedFiscalYear?.id || null,  // Required by Firestore Rules
+          organisateur_id: appUser?.id || '',  // ✅ Required by Firestore rules
           created_at: serverTimestamp(),
           updated_at: serverTimestamp(),
           created_by: 'manual'
@@ -1863,277 +1872,318 @@ export function OperationsPage() {
         </div>
       </div>
 
-      {/* Table des opérations */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-calypso-blue"></div>
-              </div>
-              <p className="text-gray-500 dark:text-dark-text-muted">Chargement des activités...</p>
-            </div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-dark-bg-tertiary border-b border-gray-200 dark:border-dark-border">
-              <tr>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
-                  onClick={() => handleSort('type')}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>Type</span>
-                    {sortField === 'type' ? (
-                      sortDirection === 'asc' ? (
-                        <ArrowUp className="h-4 w-4" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
-                  onClick={() => handleSort('titre')}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>Activité</span>
-                    {sortField === 'titre' ? (
-                      sortDirection === 'asc' ? (
-                        <ArrowUp className="h-4 w-4" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
-                  onClick={() => handleSort('date_debut')}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>Date</span>
-                    {sortField === 'date_debut' ? (
-                      sortDirection === 'asc' ? (
-                        <ArrowUp className="h-4 w-4" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
-                  onClick={() => handleSort('participants')}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Participants</span>
-                    {sortField === 'participants' ? (
-                      sortDirection === 'asc' ? (
-                        <ArrowUp className="h-4 w-4" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
-                  onClick={() => handleSort('balance')}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Balance</span>
-                    {sortField === 'balance' ? (
-                      sortDirection === 'asc' ? (
-                        <ArrowUp className="h-4 w-4" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
-                  onClick={() => handleSort('statut')}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Statut</span>
-                    {sortField === 'statut' ? (
-                      sortDirection === 'asc' ? (
-                        <ArrowUp className="h-4 w-4" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                    )}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredEvents.map((event) => {
-                const eventInscriptions = inscriptions[event.id] || [];
-                const eventTransactions = linkedTransactions[event.id] || [];
-                const inscriptionsPaid = eventInscriptions.filter(i => i.paye).length;
-                const totalRevenus = eventInscriptions.reduce((sum, i) => sum + (i.paye ? i.prix : 0), 0);
-                const totalDepenses = eventTransactions
-                  .filter(t => t.montant < 0)
-                  .reduce((sum, t) => sum + Math.abs(t.montant), 0);
-
-                // Calculer le solde selon le type d'opération
-                const hasParticipants = ['evenement', 'cotisation', 'caution'].includes(event.type || 'evenement');
-
-                let balance = 0;
-                if (hasParticipants) {
-                  // REVENUS: Inscriptions payées (transactions bancaires + espèces)
-                  const revenus = eventInscriptions.filter(i => i.paye).reduce((sum, i) => sum + i.prix, 0);
-
-                  // DÉPENSES: Demandes de remboursement liées
-                  const depenses = (linkedExpenses[event.id] || []).reduce((sum, d) => sum + d.montant, 0);
-
-                  balance = revenus - depenses;
-                } else {
-                  // Pour autres types: somme des transactions liées (pas de montant_prevu)
-                  balance = eventTransactions.reduce((sum, tx) => sum + tx.montant, 0);
-                }
-
-                // Fonction helper pour afficher le type
-                const getTypeLabel = (type: string) => {
-                  switch (type) {
-                    case 'evenement': return 'Événement';
-                    case 'cotisation': return 'Cotisation';
-                    case 'caution': return 'Caution';
-                    case 'vente': return 'Vente';
-                    case 'subvention': return 'Subvention';
-                    case 'autre': return 'Autre';
-                    default: return type;
-                  }
-                };
-
-                const getTypeColor = (type: string) => {
-                  switch (type) {
-                    case 'evenement': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
-                    case 'cotisation': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
-                    case 'caution': return 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400';
-                    case 'vente': return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400';
-                    case 'subvention': return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
-                    case 'autre': return 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300';
-                    default: return 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300';
-                  }
-                };
-
-                return (
-                  <tr
-                    key={event.id}
-                    id={`event-${event.id}`}
-                    className={cn(
-                      "hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary transition-colors",
-                      lastViewedEventId === event.id && "bg-blue-100 dark:bg-blue-900/30"
-                    )}
-                  >
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap",
-                        getTypeColor(event.type || 'evenement')
-                      )}>
-                        {getTypeLabel(event.type || 'evenement')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-dark-text-primary">{event.titre}</p>
-                        <p className="text-sm text-gray-500 dark:text-dark-text-muted">{event.organisateur_nom}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <p className="text-gray-900 dark:text-dark-text-primary">{formatDate(event.date_debut, 'dd MMM yyyy')}</p>
-                        {event.date_fin && event.date_fin.getTime() !== event.date_debut.getTime() && (
-                          <p className="text-gray-500 dark:text-dark-text-muted">→ {formatDate(event.date_fin, 'dd MMM')}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Users className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">
-                            {eventInscriptions.length}
-                            {event.capacite_max && (
-                              <span className="text-gray-500 dark:text-dark-text-muted">/{event.capacite_max}</span>
-                            )}
-                          </span>
-                        </div>
-                        {event.capacite_max && (
-                          <div className="mt-1 w-20 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                            <div
-                              className="bg-calypso-blue dark:bg-calypso-aqua h-1.5 rounded-full"
-                              style={{ width: `${Math.min(100, (eventInscriptions.length / event.capacite_max) * 100)}%` }}
-                            />
-                          </div>
-                        )}
-                        <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">
-                          {inscriptionsPaid} payé{inscriptionsPaid > 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={cn(
-                        "px-3 py-1.5 text-sm rounded-lg font-semibold",
-                        balance >= 0
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                          : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                      )}>
-                        {formatMontant(balance)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={cn(
-                        "px-2 py-1 text-xs rounded-full font-medium",
-                        event.statut === 'ouvert' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                        event.statut === 'ferme' ? 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300' :
-                        event.statut === 'annule' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
-                        'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                      )}>
-                        {event.statut}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => {
-                          setLastViewedEventId(event.id);
-                          setDetailViewEvent(event);
-                        }}
-                        className="text-gray-600 dark:text-dark-text-secondary hover:text-gray-700 dark:text-dark-text-primary"
-                        title="Voir les détails"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
-        )}
+      {/* View Mode Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setViewMode('table')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
+            viewMode === 'table'
+              ? "bg-blue-600 text-white"
+              : "bg-white dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
+          )}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Liste
+        </button>
+        <button
+          onClick={() => setViewMode('calendar')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
+            viewMode === 'calendar'
+              ? "bg-blue-600 text-white"
+              : "bg-white dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
+          )}
+        >
+          <Calendar className="h-4 w-4" />
+          Calendrier
+        </button>
       </div>
+
+      {viewMode === 'table' ? (
+        /* Table des opérations */
+        <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 mb-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-calypso-blue"></div>
+                </div>
+                <p className="text-gray-500 dark:text-dark-text-muted">Chargement des activités...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-dark-bg-tertiary border-b border-gray-200 dark:border-dark-border">
+                  <tr>
+                    <th
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
+                      onClick={() => handleSort('type')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>Type</span>
+                        {sortField === 'type' ? (
+                          sortDirection === 'asc' ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
+                      onClick={() => handleSort('titre')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>Activité</span>
+                        {sortField === 'titre' ? (
+                          sortDirection === 'asc' ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
+                      onClick={() => handleSort('date_debut')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>Date</span>
+                        {sortField === 'date_debut' ? (
+                          sortDirection === 'asc' ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
+                      onClick={() => handleSort('participants')}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <span>Participants</span>
+                        {sortField === 'participants' ? (
+                          sortDirection === 'asc' ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
+                      onClick={() => handleSort('balance')}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <span>Balance</span>
+                        {sortField === 'balance' ? (
+                          sortDirection === 'asc' ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:bg-dark-bg-tertiary transition-colors"
+                      onClick={() => handleSort('statut')}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <span>Statut</span>
+                        {sortField === 'statut' ? (
+                          sortDirection === 'asc' ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredEvents.map((event) => {
+                    const eventInscriptions = inscriptions[event.id] || [];
+                    const eventTransactions = linkedTransactions[event.id] || [];
+                    const inscriptionsPaid = eventInscriptions.filter(i => i.paye).length;
+                    const totalRevenus = eventInscriptions.reduce((sum, i) => sum + (i.paye ? i.prix : 0), 0);
+                    const totalDepenses = eventTransactions
+                      .filter(t => t.montant < 0)
+                      .reduce((sum, t) => sum + Math.abs(t.montant), 0);
+
+                    // Calculer le solde selon le type d'opération
+                    const hasParticipants = ['evenement', 'cotisation', 'caution'].includes(event.type || 'evenement');
+
+                    let balance = 0;
+                    if (hasParticipants) {
+                      // REVENUS: Inscriptions payées (transactions bancaires + espèces)
+                      const revenus = eventInscriptions.filter(i => i.paye).reduce((sum, i) => sum + i.prix, 0);
+
+                      // DÉPENSES: Demandes de remboursement liées
+                      const depenses = (linkedExpenses[event.id] || []).reduce((sum, d) => sum + d.montant, 0);
+
+                      balance = revenus - depenses;
+                    } else {
+                      // Pour autres types: somme des transactions liées (pas de montant_prevu)
+                      balance = eventTransactions.reduce((sum, tx) => sum + tx.montant, 0);
+                    }
+
+                    // Fonction helper pour afficher le type
+                    const getTypeLabel = (type: string) => {
+                      switch (type) {
+                        case 'evenement': return 'Événement';
+                        case 'cotisation': return 'Cotisation';
+                        case 'caution': return 'Caution';
+                        case 'vente': return 'Vente';
+                        case 'subvention': return 'Subvention';
+                        case 'autre': return 'Autre';
+                        default: return type;
+                      }
+                    };
+
+                    const getTypeColor = (type: string) => {
+                      switch (type) {
+                        case 'evenement': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+                        case 'cotisation': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+                        case 'caution': return 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400';
+                        case 'vente': return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400';
+                        case 'subvention': return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+                        case 'autre': return 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300';
+                        default: return 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300';
+                      }
+                    };
+
+                    return (
+                      <tr
+                        key={event.id}
+                        id={`event-${event.id}`}
+                        className={cn(
+                          "hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary transition-colors",
+                          lastViewedEventId === event.id && "bg-blue-100 dark:bg-blue-900/30"
+                        )}
+                      >
+                        <td className="px-6 py-4">
+                          <span className={cn(
+                            "px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap",
+                            getTypeColor(event.type || 'evenement')
+                          )}>
+                            {getTypeLabel(event.type || 'evenement')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-gray-900 dark:text-dark-text-primary">{event.titre}</p>
+                              <SourceBadge operation={event} showLock={true} />
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-dark-text-muted">{event.organisateur_nom}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            <p className="text-gray-900 dark:text-dark-text-primary">{formatDate(event.date_debut, 'dd MMM yyyy')}</p>
+                            {event.date_fin && event.date_fin.getTime() !== event.date_debut.getTime() && (
+                              <p className="text-gray-500 dark:text-dark-text-muted">→ {formatDate(event.date_fin, 'dd MMM')}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Users className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
+                              <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">
+                                {eventInscriptions.length}
+                                {event.capacite_max && (
+                                  <span className="text-gray-500 dark:text-dark-text-muted">/{event.capacite_max}</span>
+                                )}
+                              </span>
+                            </div>
+                            {event.capacite_max && (
+                              <div className="mt-1 w-20 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                <div
+                                  className="bg-calypso-blue dark:bg-calypso-aqua h-1.5 rounded-full"
+                                  style={{ width: `${Math.min(100, (eventInscriptions.length / event.capacite_max) * 100)}%` }}
+                                />
+                              </div>
+                            )}
+                            <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">
+                              {inscriptionsPaid} payé{inscriptionsPaid > 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={cn(
+                            "px-3 py-1.5 text-sm rounded-lg font-semibold",
+                            balance >= 0
+                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                              : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                          )}>
+                            {formatMontant(balance)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={cn(
+                            "px-2 py-1 text-xs rounded-full font-medium",
+                            event.statut === 'ouvert' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                              event.statut === 'ferme' ? 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300' :
+                                event.statut === 'annule' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+                                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                          )}>
+                            {event.statut}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => {
+                              setLastViewedEventId(event.id);
+                              setDetailViewEvent(event);
+                            }}
+                            className="text-gray-600 dark:text-dark-text-secondary hover:text-gray-700 dark:text-dark-text-primary"
+                            title="Voir les détails"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <CalendarView
+          events={filteredEvents}
+          onEventClick={(event) => {
+            setDetailViewEvent(event);
+            setLastViewedEventId(event.id);
+          }}
+        />
+      )}
 
       {/* Modal d'import VP Dive */}
       <VPDiveImportModal

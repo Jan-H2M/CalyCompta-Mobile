@@ -4,6 +4,7 @@ export type Role = 'membre' | 'organisateur' | 'validateur' | 'admin';
 
 // Export user types
 export * from './user.types';
+import { Permission, UserRole, UserStatus } from './user.types';
 
 /**
  * Membre unifié - Combine utilisateurs CalyCompta ET membres club
@@ -104,8 +105,6 @@ export interface Membre {
 
 // Nouveaux types pour structure unifiée
 export type MemberStatus = 'active' | 'inactive' | 'archived';
-export type UserRole = 'superadmin' | 'admin' | 'validateur' | 'user';
-export type UserStatus = 'pending' | 'active' | 'inactive' | 'suspended' | 'deleted';
 
 export interface TransactionBancaire {
   id: string;
@@ -154,13 +153,13 @@ export interface TransactionBancaire {
   // Ancien système (déprécié, gardé pour compatibilité migration)
   is_split?: boolean;  // DÉPRÉCIÉ - Utiliser is_parent
   split_count?: number; // DÉPRÉCIÉ - Utiliser child_count
-  
+
   // Champs de réconciliation avancée
   type?: 'income' | 'expense'; // Type calculé depuis le montant
   expense_claim_id?: string; // Lien vers demande de remboursement
   vp_dive_import_id?: string; // Lien vers import VP Dive
   matched_entities?: MatchedEntity[]; // Entités liées
-  
+
   // Champ commentaire
   commentaire?: string; // Commentaire libre sur la transaction
 
@@ -223,6 +222,13 @@ export interface Operation {
   // Identification
   id: string;
   type: TypeOperation;
+
+  // Source & Synchronization
+  source?: 'vpdive' | 'caly';     // 'vpdive' | 'caly' | null (default: caly)
+  vpdiveId?: string;              // Original VPdive reference
+  isEditable?: boolean;           // Can modify in Caly
+  lastSyncedAt?: Date;            // Last VPdive sync
+  syncStatus?: 'synced' | 'pending' | 'error';
 
   // Champs communs (TOUS types)
   titre: string;
@@ -394,25 +400,25 @@ export interface DemandeRemboursement {
   date_demande: Date;
   date_depense?: Date;
   date_soumission?: Date;
-  
+
   // Premier approbateur
   date_approbation?: Date;
   approuve_par?: string;
   approuve_par_nom?: string;
-  
+
   // Deuxième approbateur (pour montants > seuil)
   date_approbation_2?: Date;
   approuve_par_2?: string;
   approuve_par_2_nom?: string;
   requires_double_approval?: boolean; // Indique si double approbation requise
-  
+
   date_remboursement?: Date;
   transaction_id?: string;
   motif_refus?: string;
   refuse_par?: string;
   refuse_par_nom?: string;
   date_refus?: Date;
-  
+
   created_at: Date;
   updated_at: Date;
   created_by?: string;

@@ -65,7 +65,7 @@ export function TransactionLinkingPanel({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
-  const [filterReconciled, setFilterReconciled] = useState<'all' | 'reconciled' | 'unreconciled'>('unreconciled');
+  const [filterReconciled, setFilterReconciled] = useState<'all' | 'reconciled' | 'unreconciled'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [montantFrom, setMontantFrom] = useState('');
@@ -113,7 +113,7 @@ export function TransactionLinkingPanel({
     setSelectedIds(new Set());
     setSearchTerm('');
     setFilterType('all');
-    setFilterReconciled('unreconciled');
+    setFilterReconciled('all');
     setMontantFrom('');
     setMontantTo('');
     setQuickDateFilter('all');

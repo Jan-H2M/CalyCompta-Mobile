@@ -55,7 +55,14 @@ export function AuthProvider({ children, value }: AuthProviderProps) {
     const initializeUser = async () => {
       if (value?.user) {
         const firebaseUser = value.user;
-        const customClaims = (firebaseUser as any).customClaims || {};
+
+        // ✅ CRITICAL FIX: Must call getIdTokenResult() to get custom claims
+        // Custom claims are NOT available directly on the user object
+        await firebaseUser.getIdToken(true); // Force refresh token
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        const customClaims = tokenResult.claims;
+
+        console.log('🔐 Custom claims loaded:', customClaims);
 
         // Try to get clubId from custom claims first, fallback to 'calypso'
         const clubId = customClaims.clubId || 'calypso';
@@ -262,21 +269,42 @@ export function AuthProvider({ children, value }: AuthProviderProps) {
       await value.user.reload();
       const idTokenResult = await value.user.getIdTokenResult(true);
       const customClaims = idTokenResult.claims;
-      
-      const updatedUser: AppUser = {
+
+      // Fetch latest Firestore data
+      const clubId = customClaims.clubId || appUser?.clubId || 'calypso';
+      let firestoreUserData: any = null;
+      try {
+        const userDocPath = `clubs/${clubId}/members/${value.user.uid}`;
+        const userDocRef = doc(db, userDocPath);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          firestoreUserData = userDocSnap.data();
+        }
+      } catch (error) {
+        console.error('❌ Error loading user from Firestore during refresh:', error);
+      }
+
+      // ✅ CRITICAL: Custom claims take precedence, fallback to Firestore, then existing appUser data
+      // This prevents role reversion when token refreshes
+      const updatedUser: Membre = {
         ...appUser!,
-        role: customClaims.role as UserRole || 'user',
-        status: customClaims.status || 'active',
-        isActive: customClaims.isActive !== false,
-        customPermissions: customClaims.customPermissions as Permission[]
+        app_role: (customClaims.role || firestoreUserData?.app_role || appUser?.app_role || 'user') as UserRole,
+        app_status: (customClaims.status || firestoreUserData?.app_status || appUser?.app_status || 'active') as UserStatus,
+        role: customClaims.role || firestoreUserData?.role || appUser?.role,
+        status: customClaims.status || firestoreUserData?.status || appUser?.status,
+        isActive: customClaims.isActive !== false && (firestoreUserData?.isActive !== false || appUser?.isActive !== false),
+        customPermissions: customClaims.customPermissions as Permission[] || appUser?.customPermissions,
+        lastLogin: new Date()
       };
-      
+
+      console.log('🔄 User data refreshed. Role:', updatedUser.app_role, 'Status:', updatedUser.app_status);
+
       setAppUser(updatedUser);
-      
+
       const updatedSession: UserSession = {
         user: updatedUser,
         permissions: PermissionService.getUserPermissions(updatedUser),
-        isEmulator: false
+        isEmulator: isEmulator
       };
       setSession(updatedSession);
     }

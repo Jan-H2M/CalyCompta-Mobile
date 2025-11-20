@@ -700,9 +700,7 @@ export function DemandeDetailView({
       onUpdate(updates);
     }
 
-      if (!isCreateMode) {
-        setIsEditing(false);
-      }
+      // No need to set editing state in edit mode - auto-save is always active
     } finally {
       setIsSaving(false);
     }
@@ -726,7 +724,6 @@ export function DemandeDetailView({
       setEditedDateDepense(
         demand.date_depense ? new Date(demand.date_depense).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       );
-      setIsEditing(false);
     }
   };
 
@@ -1247,7 +1244,25 @@ export function DemandeDetailView({
             )}
 
             {/* Create mode buttons - in header (auto-save mode for edit) */}
-            {/* REMOVED: "Créer la demande" button - creation happens automatically upon file upload */}
+            {isCreateMode && onCreate && (
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Création en cours...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Créer la dépense
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
 

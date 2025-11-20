@@ -21,6 +21,7 @@ import {
   Search
 } from 'lucide-react';
 import { Operation, TransactionBancaire, DemandeRemboursement, DocumentJustificatif, InscriptionEvenement } from '@/types';
+import { SourceBadge } from '../evenements/SourceBadge';
 import { CategoryAccountSelector } from '@/components/banque/CategoryAccountSelector';
 import { formatMontant, formatDate, cn } from '@/utils/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -401,6 +402,7 @@ export function OperationDetailView({
                 {operation.titre}
               </h2>
               {getStatusBadge(operation.statut)}
+              <SourceBadge operation={operation} showLock={true} />
             </div>
             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-dark-text-secondary">
               <span className="flex items-center gap-1">
@@ -1079,203 +1081,203 @@ export function OperationDetailView({
                   </div>
                 )}
 
-              {linkedInscriptions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-dark-text-muted">
-                  <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucune inscription pour cet événement</p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {linkedInscriptions.map((inscription) => {
-                    // Determine payment status and background color
-                    const isLinkedToBank = inscription.transaction_id && inscription.paye;
-                    const isPaidCash = !inscription.transaction_id && inscription.paye && inscription.mode_paiement === 'cash';
-                    const isUnpaid = !inscription.paye;
+                {linkedInscriptions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-dark-text-muted">
+                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Aucune inscription pour cet événement</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {linkedInscriptions.map((inscription) => {
+                      // Determine payment status and background color
+                      const isLinkedToBank = inscription.transaction_id && inscription.paye;
+                      const isPaidCash = !inscription.transaction_id && inscription.paye && inscription.mode_paiement === 'cash';
+                      const isUnpaid = !inscription.paye;
 
-                    const bgColor = isLinkedToBank
-                      ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
-                      : isUnpaid
-                      ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
-                      : isPaidCash
-                      ? 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800'
-                      : 'border-gray-200 dark:border-dark-border';
+                      const bgColor = isLinkedToBank
+                        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                        : isUnpaid
+                          ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                          : isPaidCash
+                            ? 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800'
+                            : 'border-gray-200 dark:border-dark-border';
 
-                    // Get default date value (without useState to avoid hook violation)
-                    const getDefaultDate = () => {
-                      if (!inscription.date_inscription) return '';
-                      try {
-                        const date = inscription.date_inscription.seconds
-                          ? new Date(inscription.date_inscription.seconds * 1000)
-                          : new Date(inscription.date_inscription);
+                      // Get default date value (without useState to avoid hook violation)
+                      const getDefaultDate = () => {
+                        if (!inscription.date_inscription) return '';
+                        try {
+                          const date = inscription.date_inscription.seconds
+                            ? new Date(inscription.date_inscription.seconds * 1000)
+                            : new Date(inscription.date_inscription);
 
-                        // Check if date is valid
-                        if (isNaN(date.getTime())) return '';
+                          // Check if date is valid
+                          if (isNaN(date.getTime())) return '';
 
-                        return date.toISOString().split('T')[0];
-                      } catch (error) {
-                        console.error('Invalid date_inscription:', inscription.date_inscription);
-                        return '';
-                      }
-                    };
+                          return date.toISOString().split('T')[0];
+                        } catch (error) {
+                          console.error('Invalid date_inscription:', inscription.date_inscription);
+                          return '';
+                        }
+                      };
 
-                    return (
-                    <div
-                      key={inscription.id}
-                      className={cn("p-2 border rounded hover:shadow-sm transition-shadow", bgColor)}
-                    >
-                      {/* Ligne 1: Nom + Badge + Date + Prix + Montant payé */}
-                      <div className="flex items-center justify-between gap-3">
-                        {/* Nom + Badge + Date */}
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900 dark:text-dark-text-primary truncate">
-                            {inscription.membre_prenom} {inscription.membre_nom}
-                          </p>
-                          {inscription.paye ? (
-                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded text-xs font-medium whitespace-nowrap">
-                              ✓ Payé
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 rounded text-xs font-medium whitespace-nowrap">
-                              Non payé
-                            </span>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            <input
-                              type="date"
-                              defaultValue={getDefaultDate()}
-                              onBlur={(e) => handleInscriptionFieldSave(inscription.id, 'date_inscription', e.target.value)}
-                              className="px-1.5 py-0.5 border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-blue-500 text-xs bg-white dark:bg-dark-bg-tertiary"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Prix + Montant payé */}
-                        <div className="flex items-center gap-3 text-right">
-                          <div className="text-sm font-bold text-gray-900 dark:text-dark-text-primary whitespace-nowrap">
-                            {formatMontant(inscription.prix)}
-                          </div>
-
-                          {/* Montant payé VIREMENT */}
-                          {inscription.transaction_id && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-gray-500 dark:text-dark-text-muted">Payé:</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary whitespace-nowrap">
-                                {formatMontant(inscription.transaction_montant || 0)}
-                              </span>
-                              {inscription.transaction_montant && Math.abs(inscription.transaction_montant - inscription.prix) > 0.01 && (
-                                <span className="text-xs text-orange-600 dark:text-orange-400 whitespace-nowrap">
-                                  (⚠️ {formatMontant(Math.abs(inscription.prix - inscription.transaction_montant))})
+                      return (
+                        <div
+                          key={inscription.id}
+                          className={cn("p-2 border rounded hover:shadow-sm transition-shadow", bgColor)}
+                        >
+                          {/* Ligne 1: Nom + Badge + Date + Prix + Montant payé */}
+                          <div className="flex items-center justify-between gap-3">
+                            {/* Nom + Badge + Date */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <p className="font-medium text-sm text-gray-900 dark:text-dark-text-primary truncate">
+                                {inscription.membre_prenom} {inscription.membre_nom}
+                              </p>
+                              {inscription.paye ? (
+                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded text-xs font-medium whitespace-nowrap">
+                                  ✓ Payé
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 rounded text-xs font-medium whitespace-nowrap">
+                                  Non payé
                                 </span>
                               )}
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3 text-gray-400" />
+                                <input
+                                  type="date"
+                                  defaultValue={getDefaultDate()}
+                                  onBlur={(e) => handleInscriptionFieldSave(inscription.id, 'date_inscription', e.target.value)}
+                                  className="px-1.5 py-0.5 border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-blue-500 text-xs bg-white dark:bg-dark-bg-tertiary"
+                                />
+                              </div>
                             </div>
-                          )}
 
-                          {/* Montant payé ESPÈCES */}
-                          {inscription.mode_paiement === 'cash' && inscription.paye && !inscription.transaction_id && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-gray-500 dark:text-dark-text-muted">Payé:</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                defaultValue={inscription.montant_paye_especes || inscription.prix}
-                                onBlur={(e) => handleInscriptionFieldSave(inscription.id, 'montant_paye_especes', e.target.value)}
-                                className="w-16 px-1.5 py-0.5 text-xs text-right border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-dark-bg-tertiary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                              <span className="text-xs text-gray-500 dark:text-dark-text-muted">€</span>
-                              {inscription.montant_paye_especes && Math.abs(inscription.montant_paye_especes - inscription.prix) > 0.01 && (
-                                <span className="text-xs text-orange-600 dark:text-orange-400 whitespace-nowrap">
-                                  (⚠️ {formatMontant(Math.abs(inscription.prix - inscription.montant_paye_especes))})
-                                </span>
+                            {/* Prix + Montant payé */}
+                            <div className="flex items-center gap-3 text-right">
+                              <div className="text-sm font-bold text-gray-900 dark:text-dark-text-primary whitespace-nowrap">
+                                {formatMontant(inscription.prix)}
+                              </div>
+
+                              {/* Montant payé VIREMENT */}
+                              {inscription.transaction_id && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-gray-500 dark:text-dark-text-muted">Payé:</span>
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary whitespace-nowrap">
+                                    {formatMontant(inscription.transaction_montant || 0)}
+                                  </span>
+                                  {inscription.transaction_montant && Math.abs(inscription.transaction_montant - inscription.prix) > 0.01 && (
+                                    <span className="text-xs text-orange-600 dark:text-orange-400 whitespace-nowrap">
+                                      (⚠️ {formatMontant(Math.abs(inscription.prix - inscription.transaction_montant))})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Montant payé ESPÈCES */}
+                              {inscription.mode_paiement === 'cash' && inscription.paye && !inscription.transaction_id && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-gray-500 dark:text-dark-text-muted">Payé:</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    defaultValue={inscription.montant_paye_especes || inscription.prix}
+                                    onBlur={(e) => handleInscriptionFieldSave(inscription.id, 'montant_paye_especes', e.target.value)}
+                                    className="w-16 px-1.5 py-0.5 text-xs text-right border border-gray-300 dark:border-dark-border rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-dark-bg-tertiary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                  <span className="text-xs text-gray-500 dark:text-dark-text-muted">€</span>
+                                  {inscription.montant_paye_especes && Math.abs(inscription.montant_paye_especes - inscription.prix) > 0.01 && (
+                                    <span className="text-xs text-orange-600 dark:text-orange-400 whitespace-nowrap">
+                                      (⚠️ {formatMontant(Math.abs(inscription.prix - inscription.montant_paye_especes))})
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      </div>
+                          </div>
 
-                      {/* Ligne 2: Actions (seulement si nécessaire) */}
-                      {(isUnpaid || inscription.transaction_id || (inscription.paye && !inscription.transaction_id && (inscription.mode_paiement !== 'cash' || !inscription.montant_paye_especes || inscription.montant_paye_especes === 0))) && (
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {/* Dropdown + Bouton Espèces pour non payés */}
-                          {isUnpaid && (
-                            <>
-                              {availableTransactions.length > 0 && onLinkInscriptionToTransaction && (
-                                <select
-                                  onChange={(e) => handleManualLink(inscription.id, e.target.value)}
-                                  className="flex-1 px-2 py-1 border border-gray-300 dark:border-dark-border rounded text-xs bg-white dark:bg-dark-bg-tertiary"
-                                  defaultValue=""
+                          {/* Ligne 2: Actions (seulement si nécessaire) */}
+                          {(isUnpaid || inscription.transaction_id || (inscription.paye && !inscription.transaction_id && (inscription.mode_paiement !== 'cash' || !inscription.montant_paye_especes || inscription.montant_paye_especes === 0))) && (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {/* Dropdown + Bouton Espèces pour non payés */}
+                              {isUnpaid && (
+                                <>
+                                  {availableTransactions.length > 0 && onLinkInscriptionToTransaction && (
+                                    <select
+                                      onChange={(e) => handleManualLink(inscription.id, e.target.value)}
+                                      className="flex-1 px-2 py-1 border border-gray-300 dark:border-dark-border rounded text-xs bg-white dark:bg-dark-bg-tertiary"
+                                      defaultValue=""
+                                    >
+                                      <option value="">-- Sélectionner transaction --</option>
+                                      {availableTransactions.map(tx => (
+                                        <option key={tx.id} value={tx.id}>
+                                          {tx.contrepartie_nom || 'Inconnu'} - {formatMontant(tx.montant)} - {formatDate(tx.date_execution)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+                                  <button
+                                    onClick={() => handleMarkPaidCash(inscription.id)}
+                                    className="px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium whitespace-nowrap"
+                                  >
+                                    💳 Espèces
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Bouton Délier pour transactions liées */}
+                              {inscription.transaction_id && (
+                                <button
+                                  onClick={() => handleUnlinkTransaction(inscription.id)}
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-auto"
                                 >
-                                  <option value="">-- Sélectionner transaction --</option>
-                                  {availableTransactions.map(tx => (
-                                    <option key={tx.id} value={tx.id}>
-                                      {tx.contrepartie_nom || 'Inconnu'} - {formatMontant(tx.montant)} - {formatDate(tx.date_execution)}
-                                    </option>
-                                  ))}
-                                </select>
+                                  Délier
+                                </button>
                               )}
-                              <button
-                                onClick={() => handleMarkPaidCash(inscription.id)}
-                                className="px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium whitespace-nowrap"
-                              >
-                                💳 Espèces
-                              </button>
-                            </>
-                          )}
 
-                          {/* Bouton Délier pour transactions liées */}
-                          {inscription.transaction_id && (
-                            <button
-                              onClick={() => handleUnlinkTransaction(inscription.id)}
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-auto"
-                            >
-                              Délier
-                            </button>
-                          )}
-
-                          {/* Bouton Marquer non payé pour orphelines */}
-                          {inscription.paye && !inscription.transaction_id && (
-                            inscription.mode_paiement !== 'cash' ||
-                            (inscription.mode_paiement === 'cash' && (!inscription.montant_paye_especes || inscription.montant_paye_especes === 0))
-                          ) && (
-                            <button
-                              onClick={() => handleMarkUnpaid(inscription.id)}
-                              className="text-xs text-orange-600 dark:text-orange-400 hover:underline ml-auto"
-                            >
-                              ⚠️ Marquer non payé
-                            </button>
+                              {/* Bouton Marquer non payé pour orphelines */}
+                              {inscription.paye && !inscription.transaction_id && (
+                                inscription.mode_paiement !== 'cash' ||
+                                (inscription.mode_paiement === 'cash' && (!inscription.montant_paye_especes || inscription.montant_paye_especes === 0))
+                              ) && (
+                                  <button
+                                    onClick={() => handleMarkUnpaid(inscription.id)}
+                                    className="text-xs text-orange-600 dark:text-orange-400 hover:underline ml-auto"
+                                  >
+                                    ⚠️ Marquer non payé
+                                  </button>
+                                )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
 
-              {/* Summary */}
-              {linkedInscriptions.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-dark-border">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600 dark:text-dark-text-secondary">Total des inscriptions:</span>
-                    <span className="font-bold text-lg text-gray-900 dark:text-dark-text-primary">
-                      {formatMontant(linkedInscriptions.reduce((sum, i) => sum + i.prix, 0))}
-                    </span>
+                {/* Summary */}
+                {linkedInscriptions.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-dark-border">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600 dark:text-dark-text-secondary">Total des inscriptions:</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-dark-text-primary">
+                        {formatMontant(linkedInscriptions.reduce((sum, i) => sum + i.prix, 0))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mt-2">
+                      <span className="text-gray-600 dark:text-dark-text-secondary">Total payé:</span>
+                      <span className="font-bold text-green-600 dark:text-green-400">
+                        {formatMontant(linkedInscriptions.filter(i => i.paye).reduce((sum, i) => sum + i.prix, 0))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mt-2">
+                      <span className="text-gray-600 dark:text-dark-text-secondary">En attente:</span>
+                      <span className="font-bold text-orange-600 dark:text-orange-400">
+                        {formatMontant(linkedInscriptions.filter(i => !i.paye).reduce((sum, i) => sum + i.prix, 0))}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-sm mt-2">
-                    <span className="text-gray-600 dark:text-dark-text-secondary">Total payé:</span>
-                    <span className="font-bold text-green-600 dark:text-green-400">
-                      {formatMontant(linkedInscriptions.filter(i => i.paye).reduce((sum, i) => sum + i.prix, 0))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm mt-2">
-                    <span className="text-gray-600 dark:text-dark-text-secondary">En attente:</span>
-                    <span className="font-bold text-orange-600 dark:text-orange-400">
-                      {formatMontant(linkedInscriptions.filter(i => !i.paye).reduce((sum, i) => sum + i.prix, 0))}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             );
           })()}
 
@@ -1510,22 +1512,22 @@ export function OperationDetailView({
                   </div>
                 )}
 
-              {/* Empty State */}
-              {hasParticipants && linkedInscriptions.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-dark-text-muted">
-                  <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucun participant enregistré</p>
-                </div>
-              )}
+                {/* Empty State */}
+                {hasParticipants && linkedInscriptions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-dark-text-muted">
+                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Aucun participant enregistré</p>
+                  </div>
+                )}
 
-              {!hasParticipants && linkedTransactions.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-dark-text-muted">
-                  <DollarSign className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucune transaction liée</p>
-                </div>
-              )}
-            </div>
-          );
+                {!hasParticipants && linkedTransactions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-dark-text-muted">
+                    <DollarSign className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Aucune transaction liée</p>
+                  </div>
+                )}
+              </div>
+            );
           })()}
 
           {activeTab === 'documents' && (
@@ -1639,7 +1641,7 @@ export function OperationDetailView({
               <p className="text-sm text-gray-500 dark:text-dark-text-muted">
                 Taille: {selectedDocument.taille < 1024 ? `${selectedDocument.taille} B` :
                   selectedDocument.taille < 1024 * 1024 ? `${(selectedDocument.taille / 1024).toFixed(1)} Ko` :
-                  `${(selectedDocument.taille / (1024 * 1024)).toFixed(1)} Mo`}
+                    `${(selectedDocument.taille / (1024 * 1024)).toFixed(1)} Mo`}
               </p>
             )}
           </div>

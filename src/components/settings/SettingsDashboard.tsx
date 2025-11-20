@@ -10,11 +10,7 @@ import {
   Mail,
   Key,
   MapPin,
-  Upload,
-  Waves,
   FileSpreadsheet,
-  Tag,
-  Calendar,
   Shield,
   Brain,
   List as ListIcon,
@@ -92,24 +88,6 @@ export function SettingsDashboard() {
     },
     // Système items (expanded from single card)
     {
-      id: 'transactions',
-      title: 'Transactions Bancaires',
-      description: 'Import CSV (BNP, KBC, ING, Belfius)',
-      icon: <Upload className="h-8 w-8" />,
-      iconBg: 'bg-cyan-100 dark:bg-cyan-900/30',
-      iconColor: 'text-cyan-600 dark:text-cyan-400',
-      route: '/transactions'
-    },
-    {
-      id: 'operations',
-      title: 'Activités VP Dive',
-      description: 'Import XLS avec inscriptions',
-      icon: <Waves className="h-8 w-8" />,
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      route: '/operations'
-    },
-    {
       id: 'import-batch',
       title: 'Import en Batch',
       description: 'Import multiple fichiers CSV',
@@ -117,15 +95,6 @@ export function SettingsDashboard() {
       iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
       iconColor: 'text-indigo-600 dark:text-indigo-400',
       route: '/parametres/import-batch'
-    },
-    {
-      id: 'annees-fiscales',
-      title: 'Années Fiscales',
-      description: 'Gestion et clôture annuelle',
-      icon: <Calendar className="h-8 w-8" />,
-      iconBg: 'bg-green-100 dark:bg-green-900/30',
-      iconColor: 'text-green-600 dark:text-green-400',
-      route: '/parametres/annees-fiscales'
     },
     {
       id: 'general',

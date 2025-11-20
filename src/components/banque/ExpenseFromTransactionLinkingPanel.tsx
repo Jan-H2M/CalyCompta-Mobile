@@ -484,10 +484,11 @@ export function ExpenseFromTransactionLinkingPanel({
 
                       {/* Expense info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            {/* Afficher la description comme titre principal (court et descriptif) */}
                             <h3 className="font-medium text-gray-900 dark:text-dark-text-primary truncate">
-                              {expense.titre || expense.description}
+                              {expense.description || expense.titre}
                             </h3>
                             <div className="flex items-center gap-2 mt-1">
                               <span className={cn(
@@ -503,7 +504,7 @@ export function ExpenseFromTransactionLinkingPanel({
                               )}
                             </div>
                           </div>
-                          <span className="font-bold text-orange-600 whitespace-nowrap">
+                          <span className="font-bold text-orange-600 whitespace-nowrap flex-shrink-0">
                             {formatMontant(expense.montant)}
                           </span>
                         </div>
@@ -526,9 +527,10 @@ export function ExpenseFromTransactionLinkingPanel({
                           )}
                         </div>
 
-                        {expense.titre && expense.description && (
-                          <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1 line-clamp-2">
-                            {expense.description}
+                        {/* Afficher le titre comme notes additionnelles (long texte explicatif) */}
+                        {expense.titre && expense.titre.trim() !== '' && (
+                          <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-2 line-clamp-2">
+                            {expense.titre}
                           </p>
                         )}
 

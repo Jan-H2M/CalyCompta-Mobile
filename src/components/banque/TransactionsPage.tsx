@@ -2667,27 +2667,26 @@ export function TransactionsPage() {
               }
 
               // 3. Mettre à jour l'état local des transactions
+              const updatedTransaction = {
+                ...detailViewTransaction,
+                matched_entities: updatedEntities.length > 0 ? updatedEntities : undefined,
+                reconcilie: updatedEntities.length > 0
+              };
+
+              // Si c'est une dépense, supprimer expense_claim_id
+              if (entity.entity_type === 'expense' || entity.entity_type === 'demand') {
+                delete (updatedTransaction as any).expense_claim_id;
+              }
+
               setTransactions(prev => prev.map(tx => {
                 if (tx.id !== detailViewTransaction.id) return tx;
-
-                // Créer une copie sans les champs à supprimer
-                const updated = {
-                  ...tx,
-                  matched_entities: updatedEntities.length > 0 ? updatedEntities : undefined,
-                  reconcilie: updatedEntities.length > 0
-                };
-
-                // Si c'est une dépense, supprimer expense_claim_id
-                if (entity.entity_type === 'expense' || entity.entity_type === 'demand') {
-                  delete (updated as any).expense_claim_id;
-                }
-
-                return updated;
+                return updatedTransaction;
               }));
 
-              // Fermer la vue détail et recharger
-              setLastViewedTransactionId(detailViewTransaction.id);
-              setDetailViewTransaction(null);
+              // Mettre à jour la vue détaillée pour refléter les changements immédiatement
+              setDetailViewTransaction(updatedTransaction);
+
+              // Recharger les données en arrière-plan pour assurer la cohérence
               loadTransactions();
               loadDemands();
             } catch (error) {
@@ -2714,15 +2713,21 @@ export function TransactionsPage() {
               await updateDoc(txRef, updates);
 
               // Mettre à jour l'état local
+              const updatedTransaction = {
+                ...detailViewTransaction,
+                matched_entities: updatedEntities.length > 0 ? updatedEntities : undefined,
+                reconcilie: updatedEntities.length > 0
+              };
+
               setTransactions(prev => prev.map(tx => {
                 if (tx.id === detailViewTransaction.id) {
-                  const updated = { ...tx };
-                  updated.matched_entities = updatedEntities.length > 0 ? updatedEntities : undefined;
-                  updated.reconcilie = updatedEntities.length > 0;
-                  return updated;
+                  return updatedTransaction;
                 }
                 return tx;
               }));
+
+              // Mettre à jour la vue détaillée pour refléter les changements immédiatement
+              setDetailViewTransaction(updatedTransaction);
 
               toast.success('Événement délié');
               loadTransactions();
