@@ -272,39 +272,52 @@ export function OperationsPage() {
       console.log(`✅ Loaded ${loadedEvents.length} operations for year ${selectedFiscalYear.year}`);
       setEvents(loadedEvents);
 
-      // 🆕 MIGRATION: Load inscriptions depuis 'operation_participants' au lieu de 'event_registrations'
+
+      // ✅ UNIFIED: Load inscriptions from subcollections for each event IN PARALLEL
       const allInscriptions: Record<string, InscriptionEvenement[]> = {};
-      const participantsRef = collection(db, 'clubs', clubId, 'operation_participants');
 
-      // Construire la requête des participants selon le filtre de type
-      let participantsQuery;
-      if (filterType === 'tous') {
-        // Charger tous les participants
-        participantsQuery = query(participantsRef);
-      } else {
-        // Filtrer par type spécifique
-        participantsQuery = query(participantsRef, where('operation_type', '==', filterType));
-      }
+      console.log(`🔍 Loading inscriptions for ${loadedEvents.length} events in parallel...`);
 
-      const inscSnapshot = await getDocs(participantsQuery);
+      // Load inscriptions for all events in parallel using Promise.all
+      const inscriptionPromises = loadedEvents.map(async (event) => {
+        try {
+          const inscriptionsRef = collection(db, 'clubs', clubId, 'operations', event.id, 'inscriptions');
+          const inscSnapshot = await getDocs(inscriptionsRef);
 
-      // Group inscriptions by event_id
-      for (const doc of inscSnapshot.docs) {
-        const inscription = {
-          ...doc.data(),
-          id: doc.id,
-          date_inscription: doc.data().date_inscription?.toDate?.() || new Date(),
-          created_at: doc.data().created_at?.toDate?.() || new Date(),
-          updated_at: doc.data().updated_at?.toDate?.() || new Date()
-        } as InscriptionEvenement;
+          console.log(`📊 Event "${event.titre}" (${event.id}): ${inscSnapshot.docs.length} inscriptions`);
 
-        // 🆕 MIGRATION: Use operation_id with fallback to evenement_id for backward compatibility
-        const eventId = inscription.operation_id || inscription.evenement_id;
-        if (!allInscriptions[eventId]) {
-          allInscriptions[eventId] = [];
+          const eventInscriptions = inscSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            date_inscription: doc.data().date_inscription?.toDate?.() || new Date(),
+            date_paiement: doc.data().date_paiement?.toDate?.() || null,
+            created_at: doc.data().created_at?.toDate?.() || new Date(),
+            updated_at: doc.data().updated_at?.toDate?.() || new Date()
+          } as InscriptionEvenement));
+
+          if (eventInscriptions.length > 0) {
+            console.log(`   ✅ Loaded ${eventInscriptions.length} inscriptions for event ${event.id}`);
+            return { eventId: event.id, inscriptions: eventInscriptions };
+          }
+          return null;
+        } catch (error) {
+          console.error(`❌ Error loading inscriptions for event ${event.id}:`, error);
+          return null;
         }
-        allInscriptions[eventId].push(inscription);
-      }
+      });
+
+      // Wait for all inscription loads to complete
+      const inscriptionResults = await Promise.all(inscriptionPromises);
+
+      // Build the inscriptions map from results
+      inscriptionResults.forEach(result => {
+        if (result) {
+          allInscriptions[result.eventId] = result.inscriptions;
+        }
+      });
+
+      console.log(`📦 Total inscriptions loaded:`, Object.keys(allInscriptions).length, 'events with inscriptions');
+      console.log(`📋 Inscriptions by event:`, allInscriptions);
 
       setInscriptions(allInscriptions);
 
@@ -335,6 +348,7 @@ export function OperationsPage() {
 
         return updatedMap;
       });
+
 
     } catch (error) {
       console.error('Error loading events:', error);
@@ -475,14 +489,14 @@ export function OperationsPage() {
   // Reload inscriptions for a specific event (called after AI validation)
   const loadInscriptions = async (eventId: string) => {
     try {
-      // 🆕 MIGRATION: Load from 'operation_participants' collection
-      const inscriptionsRef = collection(db, 'clubs', clubId, 'operation_participants');
-      const inscQuery = query(inscriptionsRef, where('operation_id', '==', eventId));
-      const inscSnapshot = await getDocs(inscQuery);
+      // ✅ UNIFIED: Load from subcollection 'clubs/{clubId}/operations/{eventId}/inscriptions'
+      const inscriptionsRef = collection(db, 'clubs', clubId, 'operations', eventId, 'inscriptions');
+      const inscSnapshot = await getDocs(inscriptionsRef);
       const eventInscriptions = inscSnapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id,
         date_inscription: doc.data().date_inscription?.toDate?.() || new Date(),
+        date_paiement: doc.data().date_paiement?.toDate?.() || null,
         created_at: doc.data().created_at?.toDate?.() || new Date(),
         updated_at: doc.data().updated_at?.toDate?.() || new Date()
       } as InscriptionEvenement));
@@ -492,19 +506,18 @@ export function OperationsPage() {
         [eventId]: eventInscriptions
       }));
 
-      console.log(`✅ Reloaded ${eventInscriptions.length} inscriptions for event ${eventId}`);
+      console.log(`✅ Loaded ${eventInscriptions.length} inscriptions for event ${eventId} from subcollection`);
     } catch (error) {
-      console.error('Error reloading inscriptions:', error);
+      console.error('Error loading inscriptions:', error);
     }
   };
 
   // Reload linked transactions for a specific event (called after AI validation)
   const loadLinkedTransactions = async (eventId: string) => {
     try {
-      // 🆕 MIGRATION: Get inscriptions from 'operation_participants'
-      const inscriptionsRef = collection(db, 'clubs', clubId, 'operation_participants');
-      const inscQuery = query(inscriptionsRef, where('operation_id', '==', eventId));
-      const inscSnapshot = await getDocs(inscQuery);
+      // ✅ UNIFIED: Get inscriptions from subcollection
+      const inscriptionsRef = collection(db, 'clubs', clubId, 'operations', eventId, 'inscriptions');
+      const inscSnapshot = await getDocs(inscriptionsRef);
       const eventInscriptions = inscSnapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
@@ -983,13 +996,17 @@ export function OperationsPage() {
   };
 
   /**
-   * Reload inscriptions for a specific event from operation_participants collection
+   * Reload inscriptions for a specific event from inscriptions subcollection
    */
   const handleRefreshInscriptions = async (eventId: string) => {
     try {
-      const inscriptionsRef = collection(db, 'clubs', clubId, 'operation_participants');
-      const q = query(inscriptionsRef, where('operation_id', '==', eventId));
-      const inscriptionsSnap = await getDocs(q);
+      console.log('🔄 Refreshing inscriptions for event:', eventId);
+
+      // Query the inscriptions subcollection under the operation
+      const inscriptionsRef = collection(db, 'clubs', clubId, 'operations', eventId, 'inscriptions');
+      const inscriptionsSnap = await getDocs(inscriptionsRef);
+
+      console.log('📊 Found inscriptions:', inscriptionsSnap.docs.length);
 
       const loadedInscriptions = inscriptionsSnap.docs.map(docSnap => ({
         ...docSnap.data(),
@@ -1000,12 +1017,16 @@ export function OperationsPage() {
         updated_at: docSnap.data().updated_at?.toDate?.() || new Date()
       })) as InscriptionEvenement[];
 
+      console.log('✅ Loaded inscriptions:', loadedInscriptions.map(i => `${i.membre_prenom} ${i.membre_nom}`));
+
       setInscriptions(prev => ({
         ...prev,
         [eventId]: loadedInscriptions
       }));
+
+      console.log('✅ Inscriptions state updated');
     } catch (error) {
-      console.error('Error refreshing inscriptions:', error);
+      console.error('❌ Error refreshing inscriptions:', error);
       throw error;
     }
   };
@@ -1224,14 +1245,15 @@ export function OperationsPage() {
   // Supprimer un événement et ses inscriptions
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      // 🆕 MIGRATION: Delete inscriptions from 'operation_participants'
-      const inscriptionsRef = collection(db, 'clubs', clubId, 'operation_participants');
-      const inscQuery = query(inscriptionsRef, where('operation_id', '==', eventId));
-      const inscriptionsSnapshot = await getDocs(inscQuery);
+      // ✅ UNIFIED: Delete inscriptions from subcollection
+      // Note: Firestore does NOT automatically delete subcollections when parent is deleted
+      const inscriptionsRef = collection(db, 'clubs', clubId, 'operations', eventId, 'inscriptions');
+      const inscriptionsSnapshot = await getDocs(inscriptionsRef);
 
       for (const inscDoc of inscriptionsSnapshot.docs) {
-        await deleteDoc(doc(db, 'clubs', clubId, 'operation_participants', inscDoc.id));
+        await deleteDoc(doc(db, 'clubs', clubId, 'operations', eventId, 'inscriptions', inscDoc.id));
       }
+
 
       // 2. Délier toutes les transactions associées
       const eventTransactions = linkedTransactions[eventId] || [];

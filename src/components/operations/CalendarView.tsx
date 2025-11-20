@@ -69,21 +69,35 @@ export function CalendarView({ events, onEventClick }: CalendarViewProps) {
         return days;
     }, [currentYear, currentMonth, daysInMonth, firstDayAdjusted]);
 
-    // Get events for a specific date
-    const getEventsForDate = (date: Date) => {
-        return events.filter(event => {
-            if (!event.date_debut) return false;
+    // Memoize events by date to avoid recalculating for each cell
+    const eventsByDate = useMemo(() => {
+        const map = new Map<string, Operation[]>();
+
+        events.forEach(event => {
+            if (!event.date_debut) return;
 
             const eventStart = new Date(event.date_debut);
             const eventEnd = event.date_fin ? new Date(event.date_fin) : eventStart;
 
-            // Check if date falls within event range
-            const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-            const startOnly = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
-            const endOnly = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
-
-            return dateOnly >= startOnly && dateOnly <= endOnly;
+            // For each day in the event's range, add it to that date's list
+            const currentDate = new Date(eventStart);
+            while (currentDate <= eventEnd) {
+                const dateKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`;
+                if (!map.has(dateKey)) {
+                    map.set(dateKey, []);
+                }
+                map.get(dateKey)!.push(event);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
         });
+
+        return map;
+    }, [events]);
+
+    // Get events for a specific date
+    const getEventsForDate = (date: Date) => {
+        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        return eventsByDate.get(dateKey) || [];
     };
 
     // Check if date is today
