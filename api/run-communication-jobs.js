@@ -395,9 +395,56 @@ async function executeAccountingCodesJob(db, clubId, job) {
       results.push({ email, success: true, messageId });
       console.log(`✅ Email sent to ${email}`);
       emailSentSuccessfully = true;
+
+      // Save to email_history collection
+      try {
+        await db
+          .collection('clubs')
+          .doc(clubId)
+          .collection('email_history')
+          .add({
+            recipientEmail: email,
+            subject,
+            htmlContent,
+            sendType: 'automated',
+            status: 'sent',
+            createdAt: Timestamp.now(),
+            sentAt: Timestamp.now(),
+            jobId: job.id,
+            jobName: job.name,
+            clubId,
+          });
+        console.log(`   ✓ Saved to email_history for ${email}`);
+      } catch (historyError) {
+        console.error(`   ⚠️ Failed to save email_history for ${email}:`, historyError.message);
+      }
+
     } catch (error) {
       console.error(`❌ Failed to send email to ${email}:`, error);
       results.push({ email, success: false, error: error.message });
+
+      // Save failed email to email_history
+      try {
+        await db
+          .collection('clubs')
+          .doc(clubId)
+          .collection('email_history')
+          .add({
+            recipientEmail: email,
+            subject,
+            htmlContent,
+            sendType: 'automated',
+            status: 'failed',
+            statusMessage: error.message,
+            createdAt: Timestamp.now(),
+            jobId: job.id,
+            jobName: job.name,
+            clubId,
+          });
+        console.log(`   ✓ Saved failed email to email_history for ${email}`);
+      } catch (historyError) {
+        console.error(`   ⚠️ Failed to save failed email_history for ${email}:`, historyError.message);
+      }
     }
   }
 
@@ -503,9 +550,56 @@ async function executePendingDemandsJob(db, clubId, job) {
       const messageId = await sendEmail(db, clubId, email, subject, htmlContent);
       results.push({ email, success: true, messageId });
       console.log(`✅ Email sent to ${email}`);
+
+      // Save to email_history collection
+      try {
+        await db
+          .collection('clubs')
+          .doc(clubId)
+          .collection('email_history')
+          .add({
+            recipientEmail: email,
+            subject,
+            htmlContent,
+            sendType: 'automated',
+            status: 'sent',
+            createdAt: Timestamp.now(),
+            sentAt: Timestamp.now(),
+            jobId: job.id,
+            jobName: job.name,
+            clubId,
+          });
+        console.log(`   ✓ Saved to email_history for ${email}`);
+      } catch (historyError) {
+        console.error(`   ⚠️ Failed to save email_history for ${email}:`, historyError.message);
+      }
+
     } catch (error) {
       console.error(`❌ Failed to send email to ${email}:`, error);
       results.push({ email, success: false, error: error.message });
+
+      // Save failed email to email_history
+      try {
+        await db
+          .collection('clubs')
+          .doc(clubId)
+          .collection('email_history')
+          .add({
+            recipientEmail: email,
+            subject,
+            htmlContent,
+            sendType: 'automated',
+            status: 'failed',
+            statusMessage: error.message,
+            createdAt: Timestamp.now(),
+            jobId: job.id,
+            jobName: job.name,
+            clubId,
+          });
+        console.log(`   ✓ Saved failed email to email_history for ${email}`);
+      } catch (historyError) {
+        console.error(`   ⚠️ Failed to save failed email_history for ${email}:`, historyError.message);
+      }
     }
   }
 
