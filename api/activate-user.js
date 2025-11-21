@@ -212,7 +212,7 @@ async function handler(req, res) {
     // 3. Set custom claims
     try {
       await auth.setCustomUserClaims(userId, {
-        role: memberData.role || 'user',
+        role: memberData.app_role || memberData.role || 'user',
         clubId: clubId
       });
       console.log('✅ [activate-user API] Custom claims set');
@@ -224,6 +224,7 @@ async function handler(req, res) {
     // 4. Update Firestore member document
     await memberRef.update({
       isActive: true,
+      member_status: 'active',
       'metadata.pendingActivation': FieldValue.delete(),
       'metadata.activatedAt': now,
       'metadata.activatedBy': decodedToken.uid,
