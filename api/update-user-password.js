@@ -100,14 +100,32 @@ export default async function handler(req, res) {
 
     // Set requirePasswordChange flag in Firestore
     console.log('🔐 [UPDATE-PASSWORD] Setting requirePasswordChange flag in Firestore...');
+    console.log('🔐 [UPDATE-PASSWORD] Document path:', `clubs/${clubId}/members/${userId}`);
     const db = admin.firestore();
-    await db.collection('clubs').doc(clubId).collection('members').doc(userId).update({
+    const userDocRef = db.collection('clubs').doc(clubId).collection('members').doc(userId);
+
+    // First verify document exists
+    const docSnapshot = await userDocRef.get();
+    if (!docSnapshot.exists) {
+      console.error('❌ [UPDATE-PASSWORD] User document does not exist in Firestore!');
+      return res.status(404).json({
+        error: 'User document not found in Firestore',
+        details: `Document path: clubs/${clubId}/members/${userId}`,
+      });
+    }
+
+    console.log('✅ [UPDATE-PASSWORD] User document exists, updating...');
+    await userDocRef.update({
       'security.requirePasswordChange': true,
       'security.passwordSetAt': admin.firestore.FieldValue.serverTimestamp(),
       'security.passwordSetBy': decodedToken.uid,
     });
 
+    // Verify the update was successful
+    const updatedDoc = await userDocRef.get();
+    const updatedData = updatedDoc.data();
     console.log('✅ [UPDATE-PASSWORD] requirePasswordChange flag set successfully');
+    console.log('🔍 [UPDATE-PASSWORD] Verification - security field after update:', JSON.stringify(updatedData.security, null, 2));
 
     return res.status(200).json({
       success: true,

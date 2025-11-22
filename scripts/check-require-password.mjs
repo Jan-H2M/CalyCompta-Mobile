@@ -9,13 +9,37 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load service account
-const serviceAccountPath = join(__dirname, '../serviceAccountKey.json');
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+// Load service account from environment or file
+let serviceAccount;
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    console.log('✅ Using FIREBASE_SERVICE_ACCOUNT_KEY from environment');
+  } catch (error) {
+    console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', error.message);
+    process.exit(1);
+  }
+} else {
+  // Fallback to local service account file
+  try {
+    const serviceAccountPath = join(__dirname, '../serviceAccountKey.json');
+    serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+    console.log('✅ Using local serviceAccountKey.json');
+  } catch (error) {
+    console.error('❌ No service account configuration found');
+    console.error('Set FIREBASE_SERVICE_ACCOUNT_KEY environment variable or create serviceAccountKey.json');
+    process.exit(1);
+  }
+}
 
 // Initialize Firebase Admin
 initializeApp({

@@ -174,15 +174,21 @@ async function handler(req, res) {
     }
 
     // 3. Update Firestore to remove requirePasswordChange flag
+    console.log('🔐 [change-password API] Removing requirePasswordChange flag from security field...');
     const updateData = {
-      requirePasswordChange: FieldValue.delete(),
+      'security.requirePasswordChange': false, // Set to false instead of delete
       updatedAt: now,
       'metadata.passwordChangedAt': now,
       'metadata.passwordChangedBy': userId
     };
 
     await memberRef.update(updateData);
-    console.log('✅ [change-password API] Firestore updated - requirePasswordChange flag removed');
+    console.log('✅ [change-password API] Firestore updated - requirePasswordChange flag set to false');
+
+    // Verify the update
+    const updatedDoc = await memberRef.get();
+    const updatedData = updatedDoc.data();
+    console.log('🔍 [change-password API] Verification - security field after update:', JSON.stringify(updatedData.security, null, 2));
 
     // 4. Create audit log
     try {

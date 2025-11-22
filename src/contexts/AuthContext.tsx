@@ -80,6 +80,8 @@ export function AuthProvider({ children, value }: AuthProviderProps) {
           if (userDocSnap.exists()) {
             firestoreUserData = userDocSnap.data();
             console.log('✅ Loaded user data from Firestore:', firestoreUserData);
+            console.log('🔍 [AuthContext] security field:', firestoreUserData.security);
+            console.log('🔍 [AuthContext] security.requirePasswordChange:', firestoreUserData?.security?.requirePasswordChange);
           } else {
             console.warn('⚠️ User document not found in Firestore at path:', userDocPath);
             console.warn('⚠️ This user needs to be created in Firestore with role assignment');

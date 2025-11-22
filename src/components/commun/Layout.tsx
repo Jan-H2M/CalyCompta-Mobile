@@ -85,7 +85,10 @@ export function Layout() {
   useEffect(() => {
     console.log('🔍 [LAYOUT] Checking requirePasswordChange:', {
       appUser: appUser?.email,
-      requirePasswordChange: appUser?.security?.requirePasswordChange,
+      hasSecurityField: !!appUser?.security,
+      securityField: appUser?.security,
+      requirePasswordChangeFromSecurity: appUser?.security?.requirePasswordChange,
+      requirePasswordChangeDirect: appUser?.requirePasswordChange,
       showPasswordChange
     });
 
@@ -94,6 +97,9 @@ export function Layout() {
       setShowPasswordChange(true);
     } else {
       console.log('✓ [LAYOUT] No password change required');
+      if (appUser) {
+        console.log('🔍 [LAYOUT] Full appUser.security object:', JSON.stringify(appUser.security, null, 2));
+      }
     }
   }, [appUser, showPasswordChange]);
 
