@@ -22,7 +22,7 @@ import {
   getSampleDataForType,
   DEFAULT_TEMPLATE_STYLES,
 } from '@/types/emailTemplates';
-import { X, Eye, Code, Palette, Save, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Eye, Code, Save, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import EmailTemplateAiChatbox from './EmailTemplateAiChatbox';
 
@@ -58,7 +58,7 @@ export function EmailTemplateEditor({ template, onClose, onSave }: Props) {
   );
   const [subject, setSubject] = useState(template?.subject || '');
   const [htmlContent, setHtmlContent] = useState(
-    template?.htmlContent || getDefaultTemplateForType('pending_demands')
+    template?.htmlContent || getDefaultTemplateForType(template?.emailType || 'pending_demands')
   );
   const [isActive, setIsActive] = useState(template?.isActive ?? true);
   const [styles, setStyles] = useState<EmailTemplateStyles>(
@@ -79,11 +79,12 @@ export function EmailTemplateEditor({ template, onClose, onSave }: Props) {
   useEffect(() => {
     setVariables(getVariablesForType(emailType));
 
-    // Load default template if switching to a new type and content is empty
-    if (!template && !htmlContent.trim()) {
-      setHtmlContent(getDefaultTemplateForType(emailType));
+    // Load default template when creating a new template (not editing)
+    if (!template) {
+      const defaultTemplate = getDefaultTemplateForType(emailType);
+      setHtmlContent(defaultTemplate);
     }
-  }, [emailType]);
+  }, [emailType, template]);
 
   // Generate preview when switching to preview tab
   useEffect(() => {
@@ -188,7 +189,7 @@ export function EmailTemplateEditor({ template, onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-dark-bg-secondary rounded-lg shadow-xl max-w-[95vw] w-full max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-border">
           <h2 className="text-xl font-bold text-gray-900 dark:text-dark-text-primary">
@@ -225,17 +226,6 @@ export function EmailTemplateEditor({ template, onClose, onSave }: Props) {
           >
             <Sparkles className="h-4 w-4" />
             ✨ Assistent IA
-          </button>
-          <button
-            onClick={() => setActiveTab('styling')}
-            className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'styling'
-                ? 'border-calypso-blue dark:border-calypso-aqua text-calypso-blue dark:text-calypso-aqua'
-                : 'border-transparent text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary'
-            }`}
-          >
-            <Palette className="h-4 w-4" />
-            Style
           </button>
           <button
             onClick={() => setActiveTab('preview')}
@@ -373,11 +363,16 @@ export function EmailTemplateEditor({ template, onClose, onSave }: Props) {
           )}
 
           {activeTab === 'ai' && (
-            <div>
+            <div className="h-full">
               <EmailTemplateAiChatbox
                 emailType={emailType}
                 variables={variables}
                 styles={styles}
+                subject={subject}
+                htmlContent={htmlContent}
+                onHtmlUpdate={(html) => {
+                  setHtmlContent(html);
+                }}
                 onApplyHtml={(html) => {
                   setHtmlContent(html);
                   setActiveTab('content');
@@ -390,98 +385,6 @@ export function EmailTemplateEditor({ template, onClose, onSave }: Props) {
                   if (!subject.trim()) setSubject(metadata.subject);
                 }}
               />
-            </div>
-          )}
-
-          {activeTab === 'styling' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                    Couleur principale
-                  </label>
-                  <input
-                    type="color"
-                    value={styles.primaryColor}
-                    onChange={(e) => setStyles({ ...styles, primaryColor: e.target.value })}
-                    className="w-full h-10 border border-gray-300 dark:border-dark-border rounded-lg cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1 block">
-                    {styles.primaryColor}
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                    Couleur secondaire
-                  </label>
-                  <input
-                    type="color"
-                    value={styles.secondaryColor || '#1E40AF'}
-                    onChange={(e) => setStyles({ ...styles, secondaryColor: e.target.value })}
-                    className="w-full h-10 border border-gray-300 dark:border-dark-border rounded-lg cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1 block">
-                    {styles.secondaryColor || '#1E40AF'}
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                    Couleur des boutons
-                  </label>
-                  <input
-                    type="color"
-                    value={styles.buttonColor || '#3B82F6'}
-                    onChange={(e) => setStyles({ ...styles, buttonColor: e.target.value })}
-                    className="w-full h-10 border border-gray-300 dark:border-dark-border rounded-lg cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1 block">
-                    {styles.buttonColor || '#3B82F6'}
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                    Couleur texte boutons
-                  </label>
-                  <input
-                    type="color"
-                    value={styles.buttonTextColor || '#FFFFFF'}
-                    onChange={(e) => setStyles({ ...styles, buttonTextColor: e.target.value })}
-                    className="w-full h-10 border border-gray-300 dark:border-dark-border rounded-lg cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1 block">
-                    {styles.buttonTextColor || '#FFFFFF'}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                  Gradient du header
-                </label>
-                <input
-                  type="text"
-                  value={styles.headerGradient || ''}
-                  onChange={(e) => setStyles({ ...styles, headerGradient: e.target.value })}
-                  placeholder="Ex: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-calypso-blue dark:focus:ring-calypso-aqua font-mono text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-                  Police (font-family CSS)
-                </label>
-                <input
-                  type="text"
-                  value={styles.fontFamily || ''}
-                  onChange={(e) => setStyles({ ...styles, fontFamily: e.target.value })}
-                  placeholder="Ex: Arial, sans-serif"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:ring-2 focus:ring-calypso-blue dark:focus:ring-calypso-aqua"
-                />
-              </div>
             </div>
           )}
 

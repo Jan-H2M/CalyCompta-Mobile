@@ -183,61 +183,6 @@ async function getRecipientEmails(db, clubId, roles) {
 }
 
 /**
- * Build fallback email content (hardcoded HTML for backward compatibility)
- */
-function buildFallbackEmailContent(transactions) {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-      <!-- Logo Calypso -->
-      <div style="text-align: center; margin: 20px 0;">
-        <img src="https://caly-compta.vercel.app/logo-horizontal.jpg" alt="Calypso Diving Club" style="max-width: 300px; height: auto;" />
-      </div>
-
-      <h2 style="color: #1e40af;">Nouvelles transactions avec codes comptables</h2>
-      <p>Bonjour,</p>
-      <p>Il y a <strong>${transactions.length} nouvelle(s) transaction(s)</strong> avec des codes comptables assignés.</p>
-
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-        <thead>
-          <tr style="background: #f3f4f6;">
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Date</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">N° Séquence</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Contrepartie</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Code</th>
-            <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">Montant</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${transactions.map(t => `
-            <tr>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${t.date_execution_formatted}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${t.numero_sequence || '-'}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${t.contrepartie_nom || '-'}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>${t.code_comptable}</strong></td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${t.montant?.toFixed(2) || '0.00'} €</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <p style="margin-top: 20px;">
-        <a href="https://caly-compta.vercel.app/transactions" style="background: #1e40af; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-          Voir toutes les transactions
-        </a>
-      </p>
-
-      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-
-      <div style="text-align: center; color: #6b7280; font-size: 12px;">
-        <p style="margin: 10px 0;">Email automatique envoyé par CalyCompta</p>
-        <img src="https://caly-compta.vercel.app/logo-vertical.png" alt="Calypso Diving Club" style="max-width: 80px; height: auto; opacity: 0.6; margin: 10px 0;" />
-        <p style="margin: 5px 0;">Calypso Diving Club</p>
-      </div>
-    </div>
-  `;
-}
-
-/**
  * Get email template by type from Firestore
  */
 async function getTemplateByType(db, clubId, emailType) {
@@ -458,45 +403,39 @@ async function executeAccountingCodesJob(db, clubId, job) {
   console.log('🔍 Loading email template for accounting_codes...');
   const template = await getTemplateByType(db, clubId, 'accounting_codes');
 
-  let subject, htmlContent;
-
-  if (template) {
-    // Use template system
-    console.log(`✅ Using template: ${template.name}`);
-
-    // Prepare template data
-    const templateData = {
-      recipientName: 'Administrateur', // Will be replaced per recipient if needed
-      clubName: 'Calypso Diving Club',
-      date: new Date().toLocaleDateString('fr-FR'),
-      totalTransactions: transactions.length,
-      logoUrl: 'https://caly-compta.vercel.app/logo-horizontal.jpg',
-      appUrl: 'https://caly-compta.vercel.app',
-      transactions: transactions.map(t => ({
-        date: t.date_execution_formatted,
-        numero_sequence: t.numero_sequence || '-',
-        contrepartie: t.contrepartie_nom || '-',
-        code_comptable: t.code_comptable,
-        montant: t.montant?.toFixed(2) || '0.00',
-      })),
-    };
-
-    const rendered = renderTemplate(template, templateData);
-    if (!rendered.success) {
-      console.error('❌ Template rendering failed, falling back to hardcoded HTML');
-      // Fall back to hardcoded version below
-      subject = `Nouvelles transactions avec codes comptables (${transactions.length} transaction(s))`;
-      htmlContent = buildFallbackEmailContent(transactions);
-    } else {
-      subject = rendered.subject;
-      htmlContent = rendered.html;
-    }
-  } else {
-    // Fallback: Use hardcoded HTML (for backward compatibility)
-    console.log('⚠️ No template found, using hardcoded HTML');
-    subject = `Nouvelles transactions avec codes comptables (${transactions.length} transaction(s))`;
-    htmlContent = buildFallbackEmailContent(transactions);
+  if (!template) {
+    console.log('⚠️ No template found for accounting_codes, skipping email send');
+    return { skipped: true, reason: 'No template configured' };
   }
+
+  // Use template system
+  console.log(`✅ Using template: ${template.name}`);
+
+  // Prepare template data
+  const templateData = {
+    recipientName: 'Administrateur', // Will be replaced per recipient if needed
+    clubName: 'Calypso Diving Club',
+    date: new Date().toLocaleDateString('fr-FR'),
+    totalTransactions: transactions.length,
+    logoUrl: 'https://caly-compta.vercel.app/logo-horizontal.jpg',
+    appUrl: 'https://caly-compta.vercel.app',
+    transactions: transactions.map(t => ({
+      date: t.date_execution_formatted,
+      numero_sequence: t.numero_sequence || '-',
+      contrepartie: t.contrepartie_nom || '-',
+      code_comptable: t.code_comptable,
+      montant: t.montant?.toFixed(2) || '0.00',
+    })),
+  };
+
+  const rendered = renderTemplate(template, templateData);
+  if (!rendered.success) {
+    console.error('❌ Template rendering failed');
+    return { success: false, error: 'Template rendering failed' };
+  }
+
+  const subject = rendered.subject;
+  const htmlContent = rendered.html;
 
   // Send to all recipients
   const results = [];
@@ -614,47 +553,48 @@ async function executePendingDemandsJob(db, clubId, job) {
   // Calculate totals
   const totalAmount = demandes.reduce((sum, d) => sum + (d.montant || 0), 0);
 
-  // Build email content
-  const subject = `📋 Rappel: ${demandes.length} demande(s) de remboursement en attente`;
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #1e40af;">Demandes de remboursement en attente</h2>
-      <p>Bonjour,</p>
-      <p>Il y a actuellement <strong>${demandes.length} demande(s) de remboursement</strong> en attente de validation.</p>
-      <p><strong>Montant total:</strong> ${totalAmount.toFixed(2)} €</p>
+  // Load email template
+  console.log('🔍 Loading email template for pending_demands...');
+  const template = await getTemplateByType(db, clubId, 'pending_demands');
 
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-        <thead>
-          <tr style="background: #f3f4f6;">
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Date</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Demandeur</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Description</th>
-            <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">Montant</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${demandes.map(d => `
-            <tr>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${d.date_depense?.toDate ? d.date_depense.toDate().toLocaleDateString('fr-BE') : '-'}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${d.demandeur_nom || '-'}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${d.description || '-'}</td>
-              <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">${(d.montant || 0).toFixed(2)} €</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+  let subject, htmlContent;
 
-      <p style="margin-top: 20px;">
-        <a href="https://caly-compta.vercel.app" style="background: #1e40af; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-          Accéder à CalyCompta
-        </a>
-      </p>
+  if (template) {
+    // Use template system
+    console.log(`✅ Using template: ${template.name}`);
 
-      <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-        Email automatique envoyé par CalyCompta
-      </p>
-    </div>
-  `;
+    // Prepare template data
+    const templateData = {
+      recipientName: 'Administrateur', // Will be replaced per recipient if needed
+      clubName: 'Calypso Diving Club',
+      date: new Date().toLocaleDateString('fr-FR'),
+      demandesCount: demandes.length,
+      totalAmount: totalAmount.toFixed(2),
+      logoUrl: 'https://caly-compta.vercel.app/logo-horizontal.jpg',
+      appUrl: 'https://caly-compta.vercel.app',
+      demandes: demandes.map(d => ({
+        date: d.date_depense?.toDate ? d.date_depense.toDate().toLocaleDateString('fr-BE') : '-',
+        demandeur: d.demandeur_nom || '-',
+        description: d.description || '-',
+        montant: (d.montant || 0).toFixed(2),
+      })),
+    };
+
+    const rendered = renderTemplate(template, templateData);
+    if (!rendered.success) {
+      console.error('❌ Template rendering failed, using fallback subject');
+      subject = `📋 Rappel: ${demandes.length} demande(s) de remboursement en attente`;
+      htmlContent = ''; // Will cause email to fail, which is better than sending broken HTML
+      return { success: false, error: 'Template rendering failed' };
+    } else {
+      subject = rendered.subject;
+      htmlContent = rendered.html;
+    }
+  } else {
+    // No template found - log warning and skip
+    console.log('⚠️ No template found for pending_demands, skipping email send');
+    return { skipped: true, reason: 'No template configured' };
+  }
 
   // Send to all recipients
   const results = [];

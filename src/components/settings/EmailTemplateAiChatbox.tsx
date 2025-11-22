@@ -3,11 +3,15 @@ import { Loader2, Send, Sparkles, CheckCircle, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import EmailTemplateAiService, { ChatMessage } from '@/services/emailTemplateAiService';
 import type { EmailTemplateType, EmailTemplateVariable, EmailTemplateStyles } from '@/types/emailTemplates';
+import { EmailPreviewPanel } from './EmailPreviewPanel';
 
 interface EmailTemplateAiChatboxProps {
   emailType: EmailTemplateType;
   variables: EmailTemplateVariable[];
   styles: EmailTemplateStyles;
+  subject: string;
+  htmlContent: string;
+  onHtmlUpdate: (html: string) => void;
   onApplyHtml: (html: string) => void;
   onApplyMetadata?: (metadata: { name: string; description: string; subject: string }) => void;
 }
@@ -16,6 +20,9 @@ export default function EmailTemplateAiChatbox({
   emailType,
   variables,
   styles,
+  subject,
+  htmlContent,
+  onHtmlUpdate,
   onApplyHtml,
   onApplyMetadata,
 }: EmailTemplateAiChatboxProps) {
@@ -66,6 +73,7 @@ export default function EmailTemplateAiChatbox({
         variables,
         styles,
         conversationHistory: messages,
+        currentHtmlContent: htmlContent, // Passer le HTML actuel pour les modifications incrémentales
       });
 
       console.log('✅ [AI Chatbox] Received response with metadata');
@@ -95,7 +103,8 @@ export default function EmailTemplateAiChatbox({
         subject: result.subject,
       });
 
-      // Appliquer automatiquement les métadonnées
+      // Appliquer automatiquement le HTML et les métadonnées
+      onHtmlUpdate(result.html);
       if (onApplyMetadata) {
         onApplyMetadata({
           name: result.name,
@@ -104,7 +113,7 @@ export default function EmailTemplateAiChatbox({
         });
       }
 
-      toast.success('Template généré avec succès!');
+      toast.success('✓ Template mis à jour automatiquement!');
     } catch (error: any) {
       console.error('Erreur lors de la génération:', error);
       toast.error(error.message || 'Erreur lors de la génération du template');
@@ -144,23 +153,25 @@ export default function EmailTemplateAiChatbox({
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-white border border-gray-200 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5" />
-          <h3 className="font-semibold">Assistant IA - Génération de templates</h3>
+    <div className="flex gap-4 h-full">
+      {/* GAUCHE: Chat IA (40%) */}
+      <div className="w-[40%] flex flex-col bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-border rounded-lg overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            <h3 className="font-semibold">Assistant IA</h3>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={handleClearChat}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="Effacer la conversation"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        {messages.length > 0 && (
-          <button
-            onClick={handleClearChat}
-            className="p-1 hover:bg-white/20 rounded transition-colors"
-            title="Effacer la conversation"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -246,35 +257,47 @@ export default function EmailTemplateAiChatbox({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
-        <div className="flex gap-2">
-          <textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Décrivez le contenu de votre email... (Cmd/Ctrl + Enter pour envoyer)"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            rows={3}
-            disabled={isGenerating}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isGenerating}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            title="Envoyer (Cmd/Ctrl + Enter)"
-          >
-            {isGenerating ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
+        {/* Input */}
+        <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg-tertiary">
+          <div className="flex gap-2">
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Décrivez le contenu de votre email... (Cmd/Ctrl + Enter pour envoyer)"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary"
+              rows={3}
+              disabled={isGenerating}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isGenerating}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              title="Envoyer (Cmd/Ctrl + Enter)"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            💡 Astuce: Vous pouvez affiner le résultat en envoyant des messages de suivi (ex: "Rends-le plus formel", "Ajoute une table")
+          </p>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          💡 Astuce: Vous pouvez affiner le résultat en envoyant des messages de suivi (ex: "Rends-le plus formel", "Ajoute une table")
-        </p>
+      </div>
+
+      {/* DROITE: Preview Panel (60%) */}
+      <div className="w-[60%]">
+        <EmailPreviewPanel
+          htmlContent={htmlContent}
+          subject={subject}
+          emailType={emailType}
+          styles={styles}
+          variables={variables}
+        />
       </div>
     </div>
   );

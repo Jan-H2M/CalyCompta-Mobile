@@ -35,68 +35,66 @@ const db = admin.firestore();
 
 /**
  * Generate sample data for testing different email types
+ * Data format matches the variables expected by each template type
  */
 function generateSampleData(emailType) {
   const now = new Date();
 
   switch (emailType) {
-    case 'pending_demands_reminder':
+    case 'pending_demands':
+      // Format matching the template variables in run-communication-jobs.js
       return {
-        count: 3,
-        items: [
+        demandesCount: 3,
+        totalAmount: '200.50',
+        demandes: [
           {
-            id: 'sample-1',
-            memberName: 'Jean Dupont',
-            amount: 45.50,
+            date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-BE'),
+            demandeur: 'Jean Dupont',
             description: 'Bouteilles plongée du 15/11',
-            createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-            urgency: false,
+            montant: '45.50',
           },
           {
-            id: 'sample-2',
-            memberName: 'Marie Martin',
-            amount: 120.00,
+            date: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-BE'),
+            demandeur: 'Marie Martin',
             description: 'Stage niveau 2',
-            createdAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000), // 8 days ago (urgent)
-            urgency: true,
+            montant: '120.00',
           },
           {
-            id: 'sample-3',
-            memberName: 'Pierre Dubois',
-            amount: 35.00,
+            date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-BE'),
+            demandeur: 'Pierre Dubois',
             description: 'Location matériel',
-            createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-            urgency: false,
+            montant: '35.00',
           },
         ],
-        totalAmount: 200.50,
       };
 
-    case 'accounting_codes_daily':
+    case 'accounting_codes':
+      // Format matching the template variables in run-communication-jobs.js
       return {
-        count: 5,
-        items: [
+        totalTransactions: 3,
+        transactions: [
           {
-            code: '600-DIVE',
-            description: 'Plongées',
-            transactionCount: 12,
-            totalAmount: 540.00,
+            date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+            numero_sequence: 'SEQ-2024-001',
+            contrepartie: 'Club Plongée Mer',
+            code_comptable: '600-DIVE',
+            montant: '540.00',
           },
           {
-            code: '601-EQUIP',
-            description: 'Équipement',
-            transactionCount: 5,
-            totalAmount: 325.00,
+            date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+            numero_sequence: 'SEQ-2024-002',
+            contrepartie: 'Équipement Pro',
+            code_comptable: '601-EQUIP',
+            montant: '325.00',
           },
           {
-            code: '602-TRAIN',
-            description: 'Formations',
-            transactionCount: 3,
-            totalAmount: 450.00,
+            date: now.toLocaleDateString('fr-FR'),
+            numero_sequence: 'SEQ-2024-003',
+            contrepartie: 'Formation PADI',
+            code_comptable: '602-TRAIN',
+            montant: '450.00',
           },
         ],
-        totalTransactions: 20,
-        totalAmount: 1315.00,
       };
 
     case 'weekly_summary':
@@ -124,210 +122,6 @@ function generateSampleData(emailType) {
         count: 1,
         message: 'Données de test pour ' + emailType,
       };
-  }
-}
-
-/**
- * Generate HTML email content based on email type and data
- */
-function generateEmailHTML(emailType, data, clubName = 'Calypso Diving Club') {
-  const baseStyles = `
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
-  `;
-
-  switch (emailType) {
-    case 'pending_demands_reminder':
-      return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { ${baseStyles} margin: 0; padding: 0; background: #f5f5f5; }
-            .container { max-width: 600px; margin: 0 auto; background: white; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; }
-            .header h1 { color: white; margin: 0; font-size: 24px; }
-            .content { padding: 30px; }
-            .summary { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .summary-item { display: flex; justify-content: space-between; margin: 10px 0; }
-            .alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-            th { background: #f8f9fa; font-weight: 600; }
-            .urgent { color: #dc3545; font-weight: bold; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>📧 ${data.count} demande(s) de remboursement en attente</h1>
-            </div>
-            <div class="content">
-              <p>Bonjour,</p>
-              <p><strong>Ceci est un email de TEST.</strong></p>
-              <p>Vous avez actuellement <strong>${data.count} demande(s)</strong> de remboursement en attente d'approbation.</p>
-
-              <div class="summary">
-                <div class="summary-item">
-                  <span>Nombre de demandes:</span>
-                  <strong>${data.count}</strong>
-                </div>
-                <div class="summary-item">
-                  <span>Montant total:</span>
-                  <strong>${data.totalAmount.toFixed(2)} €</strong>
-                </div>
-              </div>
-
-              ${data.items.some(i => i.urgency) ? `
-                <div class="alert">
-                  ⚠️ <strong>Attention:</strong> Certaines demandes ont plus de 7 jours et nécessitent une action urgente !
-                </div>
-              ` : ''}
-
-              <h3>Détails des demandes:</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Membre</th>
-                    <th>Description</th>
-                    <th>Montant</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${data.items.map(item => `
-                    <tr>
-                      <td>${item.memberName}</td>
-                      <td>${item.description}</td>
-                      <td ${item.urgency ? 'class="urgent"' : ''}>${item.amount.toFixed(2)} €</td>
-                      <td>${item.urgency ? '<span class="urgent">⚠️ </span>' : ''}${item.createdAt.toLocaleDateString('fr-BE')}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-
-              <a href="https://caly.club/parametres" class="button">📋 Consulter les demandes</a>
-            </div>
-            <div class="footer">
-              <p>${clubName} - Système de gestion automatisée</p>
-              <p style="color: #999; margin-top: 10px;">⚠️ Ceci est un email de test envoyé depuis CalyCompta</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-    case 'accounting_codes_daily':
-      return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { ${baseStyles} margin: 0; padding: 0; background: #f5f5f5; }
-            .container { max-width: 600px; margin: 0 auto; background: white; }
-            .header { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 30px; text-align: center; }
-            .header h1 { color: white; margin: 0; font-size: 24px; }
-            .content { padding: 30px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-            th { background: #f8f9fa; font-weight: 600; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>📊 Codes comptables - Rapport quotidien</h1>
-            </div>
-            <div class="content">
-              <p>Bonjour,</p>
-              <p><strong>Ceci est un email de TEST.</strong></p>
-              <p>Voici le rapport quotidien des codes comptables utilisés aujourd'hui.</p>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Description</th>
-                    <th>Transactions</th>
-                    <th>Montant total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${data.items.map(item => `
-                    <tr>
-                      <td><strong>${item.code}</strong></td>
-                      <td>${item.description}</td>
-                      <td>${item.transactionCount}</td>
-                      <td>${item.totalAmount.toFixed(2)} €</td>
-                    </tr>
-                  `).join('')}
-                  <tr style="background: #f8f9fa; font-weight: bold;">
-                    <td colspan="2">TOTAL</td>
-                    <td>${data.totalTransactions}</td>
-                    <td>${data.totalAmount.toFixed(2)} €</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="footer">
-              <p>${clubName} - Système de gestion automatisée</p>
-              <p style="color: #999; margin-top: 10px;">⚠️ Ceci est un email de test envoyé depuis CalyCompta</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-    default:
-      return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { ${baseStyles} margin: 0; padding: 0; background: #f5f5f5; }
-            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>📧 Email de test</h1>
-            <p><strong>Ceci est un email de TEST.</strong></p>
-            <p>Type d'email: <strong>${emailType}</strong></p>
-            <pre>${JSON.stringify(data, null, 2)}</pre>
-            <div class="footer">
-              <p>${clubName} - Système de gestion automatisée</p>
-              <p style="color: #999; margin-top: 10px;">⚠️ Ceci est un email de test envoyé depuis CalyCompta</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-  }
-}
-
-/**
- * Generate email subject based on email type
- */
-function generateSubject(emailType, data) {
-  switch (emailType) {
-    case 'pending_demands_reminder':
-      return `[TEST] 📧 ${data.count} demande(s) de remboursement en attente`;
-    case 'accounting_codes_daily':
-      return `[TEST] 📊 Codes comptables - Rapport quotidien`;
-    case 'weekly_summary':
-      return `[TEST] 📈 Résumé hebdomadaire - Semaine ${data.weekNumber}`;
-    case 'monthly_report':
-      return `[TEST] 📊 Rapport mensuel - ${data.month}`;
-    default:
-      return `[TEST] 📧 Email de test - ${emailType}`;
   }
 }
 
@@ -416,34 +210,106 @@ export default async function handler(req, res) {
       templateId: job.templateId,
     });
 
+    // Load the email template (same as run-communication-jobs.js)
+    console.log('📄 [TEST-EMAIL] Loading email template from Firestore...');
+
+    // Helper function to get template by type (same as in run-communication-jobs.js)
+    async function getTemplateByType(emailType) {
+      const templatesSnapshot = await db
+        .collection('clubs')
+        .doc(clubId)
+        .collection('email_templates')
+        .where('emailType', '==', emailType)
+        .where('isActive', '==', true)
+        .get();
+
+      if (templatesSnapshot.empty) {
+        console.log(`⚠️ No active template found for type: ${emailType}`);
+        return null;
+      }
+
+      // Prefer default template, otherwise use the first active one
+      const templates = templatesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const defaultTemplate = templates.find(t => t.isDefault === true);
+      const template = defaultTemplate || templates[0];
+
+      console.log(`✅ Found template: ${template.name} (${template.id})`);
+      return template;
+    }
+
+    // Helper function to render template (same as in run-communication-jobs.js)
+    function renderTemplate(template, data) {
+      try {
+        const Handlebars = require('handlebars');
+
+        // Compile Handlebars templates
+        const subjectTemplate = Handlebars.compile(template.subject);
+        const htmlTemplate = Handlebars.compile(template.htmlContent);
+
+        // Inject styles into data for easy access
+        const dataWithStyles = {
+          ...data,
+          ...template.styles,
+        };
+
+        // Render
+        const renderedSubject = subjectTemplate(dataWithStyles);
+        const renderedHtml = htmlTemplate(dataWithStyles);
+
+        console.log(`✅ Template rendered successfully: ${template.name}`);
+        return {
+          success: true,
+          subject: renderedSubject,
+          html: renderedHtml,
+        };
+      } catch (error) {
+        console.error('❌ Error rendering template:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+    }
+
+    // Get the template for this job's email type
+    const template = await getTemplateByType(job.emailType);
+
+    if (!template) {
+      console.error('❌ [TEST-EMAIL] No template found for email type:', job.emailType);
+      return res.status(404).json({
+        error: 'No template configured',
+        details: `No active template found for email type: ${job.emailType}. Please create and activate a template first.`,
+      });
+    }
+
     // Generate sample data for the email type
     console.log('📊 [TEST-EMAIL] Generating sample data...');
     const sampleData = generateSampleData(job.emailType);
 
-    // Check if job has a custom template
-    let htmlContent, subject;
-    if (job.templateId) {
-      console.log('📄 [TEST-EMAIL] Loading custom template:', job.templateId);
-      const templateDoc = await db.collection('clubs').doc(clubId).collection('email_templates').doc(job.templateId).get();
+    // Add common template variables
+    const templateData = {
+      ...sampleData,
+      recipientName: 'Administrateur Test',
+      clubName: clubName,
+      logoUrl: 'https://caly-compta.vercel.app/logo-horizontal.jpg',
+      appUrl: 'https://caly-compta.vercel.app',
+      date: new Date().toLocaleDateString('fr-FR'),
+    };
 
-      if (templateDoc.exists) {
-        const template = templateDoc.data();
-        htmlContent = template.htmlContent;
-        subject = `[TEST] ${template.subject}`;
+    // Render the template with sample data
+    console.log('🎨 [TEST-EMAIL] Rendering template with sample data...');
+    const rendered = renderTemplate(template, templateData);
 
-        // TODO: Replace template variables with sample data
-        // For now, just use the template as-is
-        console.log('✅ [TEST-EMAIL] Using custom template');
-      } else {
-        console.log('⚠️ [TEST-EMAIL] Custom template not found, using hardcoded template');
-        htmlContent = generateEmailHTML(job.emailType, sampleData, clubName);
-        subject = generateSubject(job.emailType, sampleData);
-      }
-    } else {
-      console.log('📄 [TEST-EMAIL] Using hardcoded template');
-      htmlContent = generateEmailHTML(job.emailType, sampleData, clubName);
-      subject = generateSubject(job.emailType, sampleData);
+    if (!rendered.success) {
+      console.error('❌ [TEST-EMAIL] Template rendering failed:', rendered.error);
+      return res.status(500).json({
+        error: 'Template rendering failed',
+        details: rendered.error,
+      });
     }
+
+    const htmlContent = rendered.html;
+    const subject = `[TEST] ${rendered.subject}`;
 
     // Load email configuration from Firestore (same as GoogleMailService)
     console.log('📧 [TEST-EMAIL] Loading email configuration...');
