@@ -4,6 +4,10 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
+import {
+  DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE,
+  DEFAULT_PASSWORD_RESET_TEMPLATE,
+} from '@/constants/defaultUserEmailTemplates';
 
 /**
  * Email template type/category
@@ -796,10 +800,6 @@ export function getVariablesForType(emailType: EmailTemplateType): EmailTemplate
  * Helper: Get default template HTML for a type
  */
 export function getDefaultTemplateForType(emailType: EmailTemplateType): string {
-  // Import user email templates dynamically to avoid circular dependencies
-  const { DEFAULT_ACCOUNT_ACTIVATED_TEMPLATE, DEFAULT_PASSWORD_RESET_TEMPLATE } =
-    require('../constants/defaultUserEmailTemplates');
-
   switch (emailType) {
     case 'pending_demands':
       return DEFAULT_PENDING_DEMANDS_TEMPLATE;
