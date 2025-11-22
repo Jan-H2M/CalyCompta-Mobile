@@ -143,7 +143,10 @@ export function AuthProvider({ children, value }: AuthProviderProps) {
           clubId: clubId,
 
           // Password management
-          requirePasswordChange: firestoreUserData?.requirePasswordChange === true,
+          requirePasswordChange: firestoreUserData?.security?.requirePasswordChange === true,
+
+          // Security metadata
+          security: firestoreUserData?.security,
         };
 
         // Initialize permissions from Firebase if not already done
