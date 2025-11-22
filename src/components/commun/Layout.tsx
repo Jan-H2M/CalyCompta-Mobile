@@ -85,11 +85,11 @@ export function Layout() {
   useEffect(() => {
     console.log('🔍 [LAYOUT] Checking requirePasswordChange:', {
       appUser: appUser?.email,
-      requirePasswordChange: appUser?.requirePasswordChange,
+      requirePasswordChange: appUser?.security?.requirePasswordChange,
       showPasswordChange
     });
 
-    if (appUser?.requirePasswordChange) {
+    if (appUser?.security?.requirePasswordChange) {
       console.log('⚠️ [LAYOUT] SHOWING PASSWORD CHANGE MODAL for:', appUser.email);
       setShowPasswordChange(true);
     } else {
