@@ -224,6 +224,34 @@ export class GoogleMailService {
     sentByName: string
   ): Promise<{ success: boolean; messageId: string; message: string }> {
     try {
+      // 0. Update the password in Firebase Auth first
+      // This ensures the password in the email matches Firebase Auth
+      console.log('🔐 Updating Firebase Auth password before sending email...');
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User must be authenticated to update passwords');
+      }
+
+      const authToken = await currentUser.getIdToken();
+      const updatePasswordResponse = await fetch('/api/update-user-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          newPassword: temporaryPassword,
+          authToken,
+        }),
+      });
+
+      if (!updatePasswordResponse.ok) {
+        const errorData = await updatePasswordResponse.json();
+        throw new Error(errorData.error || 'Failed to update password in Firebase Auth');
+      }
+
+      console.log('✅ Password updated in Firebase Auth');
+
       // 1. Récupérer le template
       const template = await getTemplate(clubId, templateId);
       if (!template) {
