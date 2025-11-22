@@ -242,6 +242,7 @@ export class GoogleMailService {
           userId: user.id,
           newPassword: temporaryPassword,
           authToken,
+          clubId,
         }),
       });
 

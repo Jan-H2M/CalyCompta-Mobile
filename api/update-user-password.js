@@ -42,25 +42,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, newPassword, authToken } = req.body;
+    const { userId, newPassword, authToken, clubId } = req.body;
 
     console.log('🔐 [UPDATE-PASSWORD] Starting password update request');
     console.log('🔐 [UPDATE-PASSWORD] Request details:', {
       userId,
+      clubId,
       hasNewPassword: !!newPassword,
       hasAuthToken: !!authToken,
     });
 
     // Validate required fields
-    if (!userId || !newPassword || !authToken) {
+    if (!userId || !newPassword || !authToken || !clubId) {
       console.error('❌ Missing required fields:', {
         userId: !!userId,
         newPassword: !!newPassword,
         authToken: !!authToken,
+        clubId: !!clubId,
       });
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['userId', 'newPassword', 'authToken'],
+        required: ['userId', 'newPassword', 'authToken', 'clubId'],
       });
     }
 
@@ -94,11 +96,22 @@ export default async function handler(req, res) {
       password: newPassword,
     });
 
-    console.log('✅ [UPDATE-PASSWORD] Password updated successfully');
+    console.log('✅ [UPDATE-PASSWORD] Password updated in Firebase Auth');
+
+    // Set requirePasswordChange flag in Firestore
+    console.log('🔐 [UPDATE-PASSWORD] Setting requirePasswordChange flag in Firestore...');
+    const db = admin.firestore();
+    await db.collection('clubs').doc(clubId).collection('members').doc(userId).update({
+      'security.requirePasswordChange': true,
+      'security.passwordSetAt': admin.firestore.FieldValue.serverTimestamp(),
+      'security.passwordSetBy': decodedToken.uid,
+    });
+
+    console.log('✅ [UPDATE-PASSWORD] requirePasswordChange flag set successfully');
 
     return res.status(200).json({
       success: true,
-      message: 'Password updated successfully',
+      message: 'Password updated successfully and user must change password on next login',
     });
 
   } catch (error) {
