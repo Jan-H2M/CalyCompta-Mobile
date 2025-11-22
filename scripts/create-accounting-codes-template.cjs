@@ -35,13 +35,7 @@ const template = {
 
   subject: 'Nouvelles transactions avec codes comptables ({{totalTransactions}} transaction(s))',
 
-  htmlContent: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+  htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
   <!-- Logo Calypso -->
   <div style="text-align: center; margin: 20px 0;">
     <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 300px; height: auto;" />
@@ -87,8 +81,7 @@ const template = {
     <img src="{{appUrl}}/logo-vertical.png" alt="{{clubName}}" style="max-width: 80px; height: auto; opacity: 0.6; margin: 10px 0;" />
     <p style="margin: 5px 0;">{{clubName}}</p>
   </div>
-</body>
-</html>`,
+</div>`,
 
   variables: [
     {

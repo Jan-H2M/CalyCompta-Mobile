@@ -403,114 +403,56 @@ export const PENDING_DEMANDS_VARIABLES: EmailTemplateVariable[] = [
 
 /**
  * Default template for "accounting_codes" type
+ * Matches the exact format of the current hardcoded email
  */
 export const DEFAULT_ACCOUNTING_CODES_TEMPLATE = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #374151; max-width: 800px; margin: 0 auto; padding: 20px;">
-
-  <!-- Header -->
-  <div style="background: {{headerGradient}}; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-    {{#if logoUrl}}
-    <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 200px; height: auto; margin-bottom: 20px;">
-    {{/if}}
-    <h1 style="margin: 0; font-size: 24px;">📊 Rapport Codes Comptables</h1>
-    <p style="margin: 10px 0 0 0; opacity: 0.9;">{{clubName}} - {{date}}</p>
+<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+  <!-- Logo Calypso -->
+  <div style="text-align: center; margin: 20px 0;">
+    <img src="{{logoUrl}}" alt="{{clubName}}" style="max-width: 300px; height: auto;" />
   </div>
 
-  <!-- Body -->
-  <div style="background: white; padding: 30px; border: 1px solid #E5E7EB; border-top: none;">
-    <p style="font-size: 16px; margin-bottom: 20px;">Bonjour {{recipientName}},</p>
+  <h2 style="color: #1e40af;">Nouvelles transactions avec codes comptables</h2>
+  <p>Bonjour,</p>
+  <p>Il y a <strong>{{totalTransactions}} nouvelle(s) transaction(s)</strong> avec des codes comptables assignés.</p>
 
-    <!-- Summary Box -->
-    <div style="background: #EFF6FF; border-left: 4px solid {{primaryColor}}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-      <p style="margin: 0; font-size: 16px; font-weight: 600;">
-        Résumé du {{date}}
-      </p>
-      <p style="margin: 5px 0 0 0; font-size: 14px;">
-        <strong>{{totalTransactions}}</strong> transaction(s) pour un total de <strong>{{totalAmount}} €</strong>
-      </p>
-    </div>
+  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+      <tr style="background: #f3f4f6;">
+        <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Date</th>
+        <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">N° Séquence</th>
+        <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Contrepartie</th>
+        <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Code</th>
+        <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">Montant</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each transactions}}
+      <tr>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">{{this.date}}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">{{this.numero_sequence}}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">{{this.contrepartie}}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>{{this.code_comptable}}</strong></td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">{{this.montant}} €</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
 
-    <p style="font-size: 14px; color: #6B7280; margin-bottom: 20px;">
-      Voici la liste des codes comptables utilisés aujourd'hui avec leurs transactions associées:
-    </p>
+  <p style="margin-top: 20px;">
+    <a href="{{appUrl}}/transactions" style="background: #1e40af; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+      Voir toutes les transactions
+    </a>
+  </p>
 
-    <!-- Accounting Codes List -->
-    {{#each accountingCodes}}
-    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-        <div>
-          <h3 style="margin: 0; font-size: 18px; color: {{../primaryColor}};">
-            {{this.code}} - {{this.description}}
-          </h3>
-          <p style="margin: 5px 0 0 0; font-size: 14px; color: #6B7280;">
-            {{this.transactionCount}} transaction(s)
-          </p>
-        </div>
-        <div style="text-align: right;">
-          <p style="margin: 0; font-size: 20px; font-weight: 700; color: #1F2937;">
-            {{this.totalAmount}} €
-          </p>
-        </div>
-      </div>
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
 
-      <!-- Transactions Table -->
-      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-        <thead>
-          <tr style="background-color: #FFFFFF;">
-            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Date</th>
-            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Description</th>
-            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Contrepartie</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #E5E7EB; font-weight: 600; font-size: 13px;">Montant</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each this.transactions}}
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; font-size: 13px;">{{this.date}}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; font-size: 13px;">{{this.description}}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; font-size: 13px;">{{this.contrepartie}}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: right; font-weight: 600; font-size: 13px;">{{this.montant}} €</td>
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
-    </div>
-    {{/each}}
-
-    <!-- CTA Button -->
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="{{appUrl}}/transactions" style="display: inline-block; background: {{buttonColor}}; color: {{buttonTextColor}}; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-        ➜ Voir toutes les transactions
-      </a>
-    </div>
-
-    <!-- Footer -->
-    <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
-
-    <p style="font-size: 14px; color: #6B7280; margin-bottom: 10px;">
-      <em>Ce rapport automatique est envoyé selon votre configuration dans Paramètres → Communication.</em>
-    </p>
-
-    <p style="font-size: 14px; margin: 0;">
-      Cordialement,<br>
-      <strong>{{clubName}}</strong>
-    </p>
+  <div style="text-align: center; color: #6b7280; font-size: 12px;">
+    <p style="margin: 10px 0;">Email automatique envoyé par CalyCompta</p>
+    <img src="{{appUrl}}/logo-vertical.png" alt="{{clubName}}" style="max-width: 80px; height: auto; opacity: 0.6; margin: 10px 0;" />
+    <p style="margin: 5px 0;">{{clubName}}</p>
   </div>
-
-  <!-- Footer -->
-  <div style="background: #F9FAFB; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #E5E7EB; border-top: none;">
-    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
-      CalyCompta - Gestion comptable pour clubs de plongée
-    </p>
-  </div>
-</body>
-</html>
+</div>
 `.trim();
 
 /**
