@@ -14,8 +14,8 @@ export function ListesValeursSettingsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-tertiary p-6">
       <div className="max-w-5xl mx-auto">
         <SettingsHeader
-          breadcrumb={['Paramètres', 'Système', 'Listes de valeurs']}
-          title="Listes de valeurs"
+          breadcrumb={['Paramètres', 'Listes de Valeurs']}
+          title="Listes de Valeurs"
           description="Gestion des listes déroulantes dynamiques"
         />
 

@@ -16,6 +16,7 @@ import {
 import { aiProviderService } from '@/services/aiProviderService';
 import { FirebaseSettingsService } from '@/services/firebaseSettingsService';
 import { GoogleMailService } from '@/services/googleMailService';
+import { SettingsHeader } from './SettingsHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { cn } from '@/utils/utils';
@@ -320,24 +321,17 @@ export default function IntegrationsSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Key className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Services Externes</h2>
-            <p className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1">
-              Configuration centralisée des services externes
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-tertiary p-6">
+      <div className="max-w-5xl mx-auto">
+        <SettingsHeader
+          breadcrumb={['Paramètres', 'Services Externes']}
+          title="Services Externes"
+          description="Configuration centralisée des services externes (IA, Email, etc.)"
+        />
 
-      {/* Intelligence Artificielle Section */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border">
+        <div className="space-y-6">
+          {/* Intelligence Artificielle Section */}
+          <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border">
         <div className="p-6 border-b border-gray-200 dark:border-dark-border">
           <h3 className="font-medium text-gray-900 dark:text-dark-text-primary">🤖 Intelligence Artificielle</h3>
           <p className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1">
@@ -484,8 +478,8 @@ export default function IntegrationsSettings() {
         </div>
       </div>
 
-      {/* Email Services Section */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border">
+          {/* Email Services Section */}
+          <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border">
         <div className="p-6 border-b border-gray-200 dark:border-dark-border">
           <h3 className="font-medium text-gray-900 dark:text-dark-text-primary">📧 Services Email</h3>
           <p className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1">
@@ -796,11 +790,11 @@ export default function IntegrationsSettings() {
             )}
             </div>
           )}
-        </div>
-      </div>
+          </div>
+          </div>
 
-      {/* Info Box */}
-      <div className="p-4 bg-blue-50 rounded-lg">
+          {/* Info Box */}
+          <div className="p-4 bg-blue-50 rounded-lg">
         <div className="flex gap-2">
           <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
@@ -812,11 +806,11 @@ export default function IntegrationsSettings() {
               <li>Connexions HTTPS uniquement pour toutes les communications</li>
             </ul>
           </div>
-        </div>
-      </div>
+          </div>
+          </div>
 
-      {/* Save Button */}
-      <button
+          {/* Save Button */}
+          <button
         onClick={handleSaveConfig}
         disabled={isSaving}
         className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-sm"
@@ -832,7 +826,9 @@ export default function IntegrationsSettings() {
             Sauvegarder toutes les clés API
           </>
         )}
-      </button>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

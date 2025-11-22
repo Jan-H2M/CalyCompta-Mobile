@@ -31,33 +31,16 @@ export function SettingsDashboard() {
   const navigate = useNavigate();
   const { appUser } = useAuth();
 
+  // Alphabetically sorted cards
   const baseCards: SettingsCard[] = [
     {
-      id: 'comptabilite',
-      title: 'Comptabilité',
-      description: 'Plan comptable, catégories et années fiscales',
-      icon: <BookOpen className="h-8 w-8" />,
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      route: '/parametres/comptabilite'
-    },
-    {
-      id: 'membres',
-      title: 'Membres & Sécurité',
-      description: 'Gestion des membres, permissions, rôles et sécurité de session',
-      icon: <Users className="h-8 w-8" />,
-      iconBg: 'bg-green-100 dark:bg-green-900/30',
-      iconColor: 'text-green-600 dark:text-green-400',
-      route: '/parametres/utilisateurs'
-    },
-    {
-      id: 'evenements',
-      title: 'Événements',
-      description: 'Gestion des lieux de plongée et tarifs',
-      icon: <MapPin className="h-8 w-8" />,
+      id: 'automatisation',
+      title: 'Catégorisation Intelligente',
+      description: 'Import de patterns pour la suggestion automatique de codes comptables',
+      icon: <Sparkles className="h-8 w-8" />,
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       iconColor: 'text-purple-600 dark:text-purple-400',
-      route: '/parametres/evenements'
+      route: '/parametres/automatisation'
     },
     {
       id: 'communication',
@@ -69,59 +52,22 @@ export function SettingsDashboard() {
       route: '/parametres/communication'
     },
     {
-      id: 'integrations',
-      title: 'Services Externes',
-      description: 'Configuration des services externes (IA, Email, etc.)',
-      icon: <Key className="h-8 w-8" />,
+      id: 'comptabilite',
+      title: 'Comptabilité',
+      description: 'Plan comptable, catégories et années fiscales',
+      icon: <BookOpen className="h-8 w-8" />,
       iconBg: 'bg-blue-100 dark:bg-blue-900/30',
       iconColor: 'text-blue-600 dark:text-blue-400',
-      route: '/parametres/integrations'
+      route: '/parametres/comptabilite'
     },
     {
-      id: 'automatisation',
-      title: 'Catégorisation Intelligente',
-      description: 'Import de patterns pour la suggestion automatique de codes comptables',
-      icon: <Sparkles className="h-8 w-8" />,
+      id: 'evenements',
+      title: 'Événements',
+      description: 'Gestion des lieux de plongée et tarifs',
+      icon: <MapPin className="h-8 w-8" />,
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       iconColor: 'text-purple-600 dark:text-purple-400',
-      route: '/parametres/automatisation'
-    },
-    // Système items (expanded from single card)
-    {
-      id: 'import-batch',
-      title: 'Import en Batch',
-      description: 'Import multiple fichiers CSV',
-      icon: <FileSpreadsheet className="h-8 w-8" />,
-      iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
-      iconColor: 'text-indigo-600 dark:text-indigo-400',
-      route: '/parametres/import-batch'
-    },
-    {
-      id: 'general',
-      title: 'Paramètres Généraux',
-      description: 'Club, devise, seuils',
-      icon: <SettingsIcon className="h-8 w-8" />,
-      iconBg: 'bg-gray-100 dark:bg-gray-900/30',
-      iconColor: 'text-gray-600 dark:text-gray-400',
-      route: '/parametres/general'
-    },
-    {
-      id: 'securite',
-      title: 'Sécurité',
-      description: 'Timeout de session',
-      icon: <Shield className="h-8 w-8" />,
-      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-      route: '/parametres/securite'
-    },
-    {
-      id: 'ia',
-      title: 'Intelligence Artificielle',
-      description: 'Clés API OpenAI/Anthropic',
-      icon: <Brain className="h-8 w-8" />,
-      iconBg: 'bg-violet-100 dark:bg-violet-900/30',
-      iconColor: 'text-violet-600 dark:text-violet-400',
-      route: '/parametres/ia-settings'
+      route: '/parametres/evenements'
     },
     {
       id: 'listes',
@@ -133,13 +79,31 @@ export function SettingsDashboard() {
       route: '/parametres/listes-valeurs'
     },
     {
-      id: 'maintenance',
-      title: 'Maintenance',
-      description: 'Nettoyage de la base',
-      icon: <Database className="h-8 w-8" />,
-      iconBg: 'bg-orange-100 dark:bg-orange-900/30',
-      iconColor: 'text-orange-600 dark:text-orange-400',
-      route: '/parametres/maintenance'
+      id: 'membres',
+      title: 'Membres & Sécurité',
+      description: 'Gestion des membres, permissions, rôles et sécurité de session',
+      icon: <Users className="h-8 w-8" />,
+      iconBg: 'bg-green-100 dark:bg-green-900/30',
+      iconColor: 'text-green-600 dark:text-green-400',
+      route: '/parametres/utilisateurs'
+    },
+    {
+      id: 'general',
+      title: 'Paramètres Généraux',
+      description: 'Club, devise, seuils',
+      icon: <SettingsIcon className="h-8 w-8" />,
+      iconBg: 'bg-gray-100 dark:bg-gray-900/30',
+      iconColor: 'text-gray-600 dark:text-gray-400',
+      route: '/parametres/general'
+    },
+    {
+      id: 'integrations',
+      title: 'Services Externes',
+      description: 'Configuration des services externes (IA, Email, etc.)',
+      icon: <Key className="h-8 w-8" />,
+      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      route: '/parametres/integrations'
     }
   ];
 

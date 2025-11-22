@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Mail, Send, Calendar, FileText } from 'lucide-react';
+import { Mail, Send, Calendar, FileText } from 'lucide-react';
+import { SettingsHeader } from '@/components/settings/SettingsHeader';
 
 interface CommunicationCard {
   id: string;
@@ -48,24 +49,11 @@ export function CommunicationDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-tertiary p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header with back button */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate('/parametres')}
-            className="flex items-center gap-2 text-gray-600 dark:text-dark-text-secondary hover:text-calypso-blue dark:hover:text-calypso-aqua mb-4 transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span>Retour aux paramètres</span>
-          </button>
-
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text-primary flex items-center gap-3">
-            <Mail className="h-8 w-8" />
-            Communication
-          </h1>
-          <p className="text-gray-600 dark:text-dark-text-secondary mt-2">
-            Emails automatiques et rappels planifiés
-          </p>
-        </div>
+        <SettingsHeader
+          breadcrumb={['Paramètres', 'Communication']}
+          title="Communication"
+          description="Emails automatiques et rappels planifiés"
+        />
 
         {/* Cards Grid - 3 columns on large screens, responsive on smaller screens */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

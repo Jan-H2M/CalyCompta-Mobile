@@ -5,16 +5,15 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Eye, ChevronRight, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Eye } from 'lucide-react';
 import { DiveLocation } from '@/types/tariff.types';
 import { DiveLocationService } from '@/services/diveLocationService';
 import { LocationDetailView } from './LocationDetailView';
+import { SettingsHeader } from './SettingsHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 export function EvenementsSettings() {
-  const navigate = useNavigate();
   const { clubId, user } = useAuth();
   const [locations, setLocations] = useState<DiveLocation[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<DiveLocation | null>(null);
@@ -141,33 +140,15 @@ export function EvenementsSettings() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm mb-4">
-          <ArrowLeft className="h-4 w-4 text-gray-600 dark:text-dark-text-secondary" />
-          <button
-            onClick={() => navigate('/parametres')}
-            className="text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary transition-colors"
-          >
-            Paramètres
-          </button>
-          <ChevronRight className="h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
-          <span className="text-gray-900 dark:text-dark-text-primary font-medium">
-            Événements
-          </span>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-tertiary p-6">
+      <div className="max-w-7xl mx-auto">
+        <SettingsHeader
+          breadcrumb={['Paramètres', 'Événements']}
+          title="Événements"
+          description="Gestion des lieux de plongée et tarifs"
+        />
 
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text-primary">
-              Événements
-            </h1>
-            <p className="text-gray-600 dark:text-dark-text-secondary mt-1">
-              Gestion des lieux de plongée et tarifs
-            </p>
-          </div>
+        <div className="mb-6 flex justify-end">
           <button
             onClick={() => setIsCreating(true)}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
@@ -176,10 +157,9 @@ export function EvenementsSettings() {
             Nouveau lieu
           </button>
         </div>
-      </div>
 
-      {/* Search Bar */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border mb-6">
+        {/* Search Bar */}
+        <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border mb-6">
         <div className="p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-dark-text-muted" />
@@ -192,10 +172,10 @@ export function EvenementsSettings() {
             />
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Locations Table */}
-      <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border">
+        {/* Locations Table */}
+        <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-sm border border-gray-200 dark:border-dark-border">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
@@ -274,10 +254,10 @@ export function EvenementsSettings() {
             </table>
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Detail Panel */}
-      {(selectedLocation || isCreating) && (
+        {/* Detail Panel */}
+        {(selectedLocation || isCreating) && (
         <LocationDetailView
           location={selectedLocation}
           isCreateMode={isCreating}
@@ -286,7 +266,8 @@ export function EvenementsSettings() {
           onCreate={handleCreateLocation}
           onDelete={handleDeleteLocation}
         />
-      )}
+        )}
+      </div>
     </div>
   );
 }
